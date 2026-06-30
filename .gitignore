@@ -1,0 +1,46 @@
+# Maven build output
+target/
+build/
+
+# Maven wrapper (the properties file IS tracked; ignore any downloaded dist)
+.mvn/wrapper/maven-wrapper.jar
+
+# Environment / secrets — keep these local, commit env.example instead
+env
+.env
+.env.*
+*.env
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Eclipse
+.settings/
+.classpath
+.project
+.factorypath
+
+# VS Code
+.vscode/
+
+# NetBeans
+nbproject/private/
+nbbuild/
+nbdist/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Logs
+*.log
+logs/
+
+# Spring Boot / misc
+*.original
+HELP.md

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Moderator Application - allchat</title>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #667eea;
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 1.1em;
+            opacity: 0.9;
+            font-weight: 300;
+            color: white;
+        }
+
+        .content {
+            padding: 40px 30px;
+        }
+
+        .greeting {
+            font-size: 1.4em;
+            color: #222;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .message {
+            font-size: 1.1em;
+            color: #444;
+            margin-bottom: 30px;
+            line-height: 1.8;
+            text-align: center;
+        }
+
+        .user-details {
+            background: #f0f3f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .user-details h3 {
+            margin-bottom: 15px;
+            color: #444;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .detail-row {
+            margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            width: 150px;
+            color: #555;
+        }
+
+        .detail-value {
+            color: #222;
+            flex: 1;
+        }
+
+        .section-header {
+            font-size: 1.25em;
+            font-weight: bold;
+            color: #444;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        .question-section {
+            margin-bottom: 20px;
+        }
+
+        .question-title {
+            font-weight: 600;
+            color: #555;
+            font-size: 1.05em;
+            margin-bottom: 8px;
+        }
+
+        .question-answer {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            color: #333;
+            white-space: pre-wrap;
+            margin-bottom: 10px;
+        }
+
+        .boolean-answer {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: #e2e8f0;
+            font-weight: bold;
+        }
+        
+        .boolean-true {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .boolean-false {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .footer {
+            background: #f0f3f7;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #ddd;
+        }
+
+        .footer-text {
+            color: #555;
+            font-size: 1.1em;
+            line-height: 1.8;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+
+            .header,
+            .content,
+            .footer {
+                padding: 30px 20px;
+            }
+
+            .detail-label {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">allchat</div>
+        <div class="tagline">New Moderator Application</div>
+    </div>
+
+    <div class="content">
+        <div class="greeting">
+            New moderator application received!
+        </div>
+
+        <div class="message">
+            A user has submitted a comprehensive application to become a moderator for allchat.
+        </div>
+
+        <div class="user-details">
+            <h3>Registered Account Details</h3>
+            <div class="detail-row">
+                <div class="detail-label">App Username:</div>
+                <div class="detail-value" th:text="${username}">username</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">App Email:</div>
+                <div class="detail-value" th:text="${email}">user@example.com</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">System Date:</div>
+                <div class="detail-value" th:text="${applicationDate}">YYYY-MM-DD HH:MM:SS</div>
+            </div>
+        </div>
+
+        <div class="section-header">Section 1: Basic Information</div>
+        
+        <div class="question-section">
+            <div class="question-title">Username on platform</div>
+            <div class="question-answer" th:text="${formUsername}">Answer</div>
+        </div>
+        <div class="question-section">
+            <div class="question-title">Email Address</div>
+            <div class="question-answer" th:text="${formEmail}">Answer</div>
+        </div>
+        <div class="question-section">
+            <div class="question-title">Time Zone</div>
+            <div class="question-answer" th:text="${timeZone}">Answer</div>
+        </div>
+        <div class="question-section">
+            <div class="question-title">Country of Residence</div>
+            <div class="question-answer" th:text="${country}">Answer</div>
+        </div>
+
+        <div class="section-header">Section 2: Availability & Commitment</div>
+        
+        <div class="question-section">
+            <div class="question-title">Hours per week available</div>
+            <div class="question-answer" th:text="${hoursPerWeek}">Answer</div>
+        </div>
+        <div class="question-section">
+            <div class="question-title">Days available</div>
+            <div class="question-answer" th:text="${daysAvailable}">Answer</div>
+        </div>
+
+        <div class="section-header">Section 3: Experience</div>
+        
+        <div class="question-section">
+            <div class="question-title">Has moderated before?</div>
+            <div class="question-answer" th:text="${hasModeratedBefore}">Answer</div>
+        </div>
+        <div class="question-section" th:if="${previousPlatforms != null and !previousPlatforms.isEmpty()}">
+            <div class="question-title">Previous Platforms</div>
+            <div class="question-answer" th:text="${previousPlatforms}">Answer</div>
+        </div>
+        <div class="question-section" th:if="${whyInterested != null and !whyInterested.isEmpty()}">
+            <div class="question-title">Why interested?</div>
+            <div class="question-answer" th:text="${whyInterested}">Answer</div>
+        </div>
+
+        <div class="section-header">Section 4: Judgment & Philosophy</div>
+        
+        <div class="question-section">
+            <div class="question-title">Role of a moderator context</div>
+            <div class="question-answer" th:text="${moderatorRoleDefinition}">Answer</div>
+        </div>
+        <div class="question-section">
+            <div class="question-title">Balancing freedom vs rules</div>
+            <div class="question-answer" th:text="${freedomBalance}">Answer</div>
+        </div>
+        <div class="question-section">
+            <div class="question-title">Over-moderation vs Under-moderation</div>
+            <div class="question-answer" th:text="${moreDangerous}">Answer</div>
+        </div>
+
+        <div class="section-header">Section 5: Handling Difficult Content</div>
+        
+        <div class="question-section">
+            <div class="question-title">Comfortable with disturbing content?</div>
+            <div class="question-answer" th:text="${comfortableWithDisturbingContent}">Answer</div>
+        </div>
+        <div class="question-section">
+            <div class="question-title">Handling unsure classifications</div>
+            <div class="question-answer" th:text="${unsureClassificationHandling}">Answer</div>
+        </div>
+
+        <div class="section-header">Section 6: Legal & Safety Awareness</div>
+        
+        <div class="question-section">
+            <div class="question-title">Read TOS & Guidelines</div>
+            <div class="question-answer" th:text="${readTosAndGuidelines}">Answer</div>
+        </div>
+        <div class="question-section">
+            <div class="question-title">Understand no download rule</div>
+            <div class="question-answer" th:text="${understandNoDownload}">Answer</div>
+        </div>
+        <div class="question-section">
+            <div class="question-title">Willing to follow procedures</div>
+            <div class="question-answer" th:text="${willingToFollowProcedures}">Answer</div>
+        </div>
+
+        <div class="section-header">Section 7: Confidentiality & Conduct</div>
+        
+        <div class="question-section">
+            <div class="question-title">Agree to keep confidential</div>
+            <div class="question-answer" th:text="${agreeToKeepConfidential}">Answer</div>
+        </div>
+        <div class="question-section">
+            <div class="question-title">Agree not to use powers for personal</div>
+            <div class="question-answer" th:text="${agreeNotToUseForPersonal}">Answer</div>
+        </div>
+
+        <div class="section-header">Section 8: Escalation & Authority</div>
+        
+        <div class="question-section">
+            <div class="question-title">Enforcing against own views</div>
+            <div class="question-answer" th:text="${comfortableEnforcingAgainstAgree}">Answer</div>
+        </div>
+        <div class="question-section">
+            <div class="question-title">Handling Admin overrule</div>
+            <div class="question-answer" th:text="${howToRespondToAdminOverrule}">Answer</div>
+        </div>
+
+        <div class="section-header">Section 9: Admin Track</div>
+        
+        <div class="question-section">
+            <div class="question-title">Interested in Admin track</div>
+            <div class="question-answer" th:text="${interestedInAdmin}">Answer</div>
+        </div>
+        <div class="question-section" th:if="${whyInterestedInAdmin != null and !whyInterestedInAdmin.isEmpty()}">
+            <div class="question-title">Why interested in Admin</div>
+            <div class="question-answer" th:text="${whyInterestedInAdmin}">Answer</div>
+        </div>
+
+        <div class="section-header">Section 10: Colored Username</div>
+        
+        <div class="question-section">
+            <div class="question-title">Agree to colored username</div>
+            <div class="question-answer" th:text="${agreeToColoredName}">Answer</div>
+        </div>
+
+        <div class="section-header">Section 11: Final Acknowledgment</div>
+        
+        <div class="question-section">
+            <div class="question-title">Acknowledge Volunteer Role</div>
+            <div>
+                <span class="boolean-answer" th:classappend="${confirmVolunteer} ? 'boolean-true' : 'boolean-false'" th:text="${confirmVolunteer} ? 'Agreed' : 'Not Agreed'"></span>
+            </div>
+        </div>
+        
+        <div class="question-section">
+            <div class="question-title">Acknowledge Decisions Reviewed</div>
+            <div>
+                <span class="boolean-answer" th:classappend="${confirmReview} ? 'boolean-true' : 'boolean-false'" th:text="${confirmReview} ? 'Agreed' : 'Not Agreed'"></span>
+            </div>
+        </div>
+        
+        <div class="question-section">
+            <div class="question-title">Acknowledge Removal Reality</div>
+            <div>
+                <span class="boolean-answer" th:classappend="${confirmRemoval} ? 'boolean-true' : 'boolean-false'" th:text="${confirmRemoval} ? 'Agreed' : 'Not Agreed'"></span>
+            </div>
+        </div>
+        
+        <div class="question-section">
+            <div class="question-title">Acknowledge Unpaid</div>
+            <div>
+                <span class="boolean-answer" th:classappend="${confirmUnpaid} ? 'boolean-true' : 'boolean-false'" th:text="${confirmUnpaid} ? 'Agreed' : 'Not Agreed'"></span>
+            </div>
+        </div>
+
+        <div class="question-section" style="margin-top: 25px; border-top: 1px dashed #ccc; padding-top: 15px;">
+            <div class="detail-row">
+                <div class="detail-label">Digital Signature:</div>
+                <div class="detail-value" th:text="${signature}">Name</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Form Date:</div>
+                <div class="detail-value" th:text="${formDate}">Date</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <div class="footer-text">
+            <span>©2026 allchat LLC. Internal automated notification.</span>
+        </div>
+    </div>
+</div>
+</body>
+
+</html>

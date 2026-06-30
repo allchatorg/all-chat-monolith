@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Ad Rejected - allchat</title>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #667eea;
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 1.1em;
+            opacity: 0.9;
+            font-weight: 300;
+            color: white;
+        }
+
+        .content {
+            padding: 40px 30px;
+        }
+
+        .greeting {
+            font-size: 1.4em;
+            color: #222;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            font-size: 1.1em;
+            color: #444;
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .ad-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .ad-info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .ad-info p {
+            color: #555;
+            margin: 5px 0;
+        }
+
+        .rejection-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .rejection-box h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .rejection-reason {
+            color: #856404;
+            font-size: 1em;
+            line-height: 1.6;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .next-steps {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .next-steps h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .next-steps ul {
+            color: #555;
+            padding-left: 20px;
+        }
+
+        .next-steps li {
+            margin: 8px 0;
+        }
+
+        .footer {
+            background: #f0f3f7;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #ddd;
+        }
+
+        .footer-text {
+            color: #555;
+            font-size: 1.1em;
+            line-height: 1.8;
+        }
+
+        .brand {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .decorative-line {
+            height: 3px;
+            background: #667eea;
+            margin: 20px 0;
+            border-radius: 2px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+
+            .header,
+            .content,
+            .footer {
+                padding: 30px 20px;
+            }
+
+            .logo {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">allchat</div>
+        <div class="tagline">Connect • Chat • Share</div>
+    </div>
+
+    <div class="content">
+        <div class="greeting">
+            Hello <span th:text="${name}">User</span>! 👋
+        </div>
+
+        <div class="message">
+            We regret to inform you that your advertisement submission has been reviewed and cannot be approved at
+            this time.
+        </div>
+
+        <div class="ad-info">
+            <h3>📢 Advertisement Details</h3>
+            <p><strong>Title:</strong> <span th:text="${adTitle}">Ad Title</span></p>
+        </div>
+
+        <div class="rejection-box">
+            <h3>⚠️ Reason for Rejection</h3>
+            <div class="rejection-reason" th:text="${rejectionReason}">
+                Rejection reason will appear here
+            </div>
+        </div>
+
+        <div class="next-steps">
+            <h3>💡 Next Steps</h3>
+            <ul>
+                <li>Your payment authorization has been automatically cancelled - no charges have been made</li>
+                <li>Please review the rejection reason above</li>
+                <li>You may create a new advertisement that addresses the concerns mentioned</li>
+                <li>If you have any questions, please contact our support team</li>
+            </ul>
+        </div>
+
+        <div class="decorative-line"></div>
+
+        <div class="message">
+            We appreciate your understanding and look forward to working with you on future advertisements that meet
+            our guidelines.
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-text">
+            Best regards,<br>
+            The <span class="brand">allchat</span> Team
+        </div>
+        <div style="margin-top: 20px; font-size: 0.8em; color: #888;">
+                <span>©2026 allchat LLC. All rights reserved. 18+ only. allchat<sup style="font-size: 0.6em;">®</sup>
+                    is a registered trademark of allchat LLC.</span>
+        </div>
+    </div>
+</div>
+</body>
+
+</html>

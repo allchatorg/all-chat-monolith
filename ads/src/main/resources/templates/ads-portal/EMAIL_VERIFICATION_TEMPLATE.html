@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Email Verification - allchat</title>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: #f5f7fa;
+            /* light background */
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+            /* darker text for contrast */
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            /* white background */
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #667eea;
+            /* keep primary brand color */
+            color: white;
+            /* text white for contrast */
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 1.1em;
+            opacity: 0.9;
+            font-weight: 300;
+            color: white;
+            /* tagline text white */
+        }
+
+        .content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .greeting {
+            font-size: 1.4em;
+            color: #222;
+            /* darker greeting text */
+            margin-bottom: 20px;
+        }
+
+        .message {
+            font-size: 1.1em;
+            color: #444;
+            /* medium dark for message */
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }
+
+        .verification-code {
+            background: #667eea;
+            /* solid brand color */
+            color: white;
+            font-size: 2.5em;
+            font-weight: bold;
+            letter-spacing: 8px;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 30px 0;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            display: inline-block;
+            min-width: 250px;
+        }
+
+        .disclaimer {
+            background: #f0f3f7;
+            /* very light grey background */
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .disclaimer p {
+            color: #555;
+            font-size: 0.95em;
+            margin: 0;
+        }
+
+        .footer {
+            background: #f0f3f7;
+            /* light background */
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #ddd;
+        }
+
+        .footer-text {
+            color: #555;
+            font-size: 1.1em;
+            line-height: 1.8;
+        }
+
+        .brand {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .decorative-line {
+            height: 3px;
+            background: #667eea;
+            /* solid brand color */
+            margin: 20px 0;
+            border-radius: 2px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+
+            .header,
+            .content,
+            .footer {
+                padding: 30px 20px;
+            }
+
+            .logo {
+                font-size: 2em;
+            }
+
+            .verification-code {
+                font-size: 2em;
+                letter-spacing: 4px;
+                padding: 20px;
+                min-width: 200px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">allchat</div>
+        <div class="tagline">Connect • Chat • Share</div>
+    </div>
+
+    <div class="content">
+        <div class="greeting">
+            Hello <span th:text="${name}">User</span>! 👋
+        </div>
+
+        <div class="message">
+            Welcome to allchat ads portal! We're excited to have you join our community.<br>
+            To complete your registration, please verify your email using the code below:
+        </div>
+
+
+        <div class="verification-code" th:text="${verificationCode}">123456</div>
+
+        <div class="decorative-line"></div>
+
+        <div class="disclaimer">
+            <p>🔒 This code will expire in 15 minutes for your security. If you didn't create an allchat account,
+                you can
+                safely ignore this email.</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-text">
+            Best regards,<br>
+            The <span class="brand">allchat</span> Team
+        </div>
+        <div style="margin-top: 20px; font-size: 0.8em; color: #888;">
+                <span>©2026 allchat LLC. All rights reserved. 18+ only. allchat<sup style="font-size: 0.6em;">®</sup>
+                    is a registered trademark of allchat LLC.</span>
+        </div>
+    </div>
+</div>
+</body>
+
+</html>

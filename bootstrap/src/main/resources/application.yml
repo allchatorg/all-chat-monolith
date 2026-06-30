@@ -1,0 +1,161 @@
+spring:
+  profiles:
+    active: dev
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  mail:
+    host: ${SPRING_MAIL_HOST}
+    port: ${SPRING_MAIL_PORT}
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          localhost: allchat.org
+    protocol: smtp
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT}
+      password: ${SPRING_DATA_REDIS_PASSWORD}
+      username: ${SPRING_DATA_REDIS_USERNAME}
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+  servlet:
+    multipart:
+      # 30MB to accommodate ads media uploads (chat needed only 11MB)
+      max-file-size: 30MB
+      max-request-size: 30MB
+  quartz:
+    job-store-type: jdbc
+    properties:
+      org:
+        quartz:
+          jobStore:
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+    jdbc:
+      initialize-schema: always
+
+app:
+  FRONT_END:
+    URL: ${APP_FRONTEND_URL}
+  admin:
+    email: ${APP_MOD_APPLICATION_DESTINATION_MAIL:info@allchat}
+  cdn:
+    domain: ${APP_CDN_DOMAIN:https://cdn.allchat.org}
+
+# --- ads-portal module config ---
+cloudflare:
+  r2:
+    access-key: ${CLOUDFLARE_ACCESS_KEY}
+    secret-key: ${CLOUDFLARE_SECRET_KEY}
+    bucket-name: ${CLOUDFLARE_BUCKET_NAME}
+    endpoint: ${CLOUDFLARE_ENDPOINT}
+    public-url: ${CLOUDFLARE_PUBLIC_URL}
+
+stripe:
+  api-key: ${STRIPE_API_KEY}
+
+# --- chat module config ---
+wasabi:
+  s3:
+    access-key: ${WASABI_ACCESS_KEY}
+    secret-key: ${WASABI_SECRET_KEY}
+    bucket-name: ${WASABI_BUCKET_NAME}
+    endpoint: ${WASABI_ENDPOINT}
+    public-url: ${WASABI_PUBLIC_URL}
+    region: ${WASABI_REGION:us-central-1}
+
+clamav:
+  host: ${CLAM_AV_HOST}
+  port: ${CLAM_AV_PORT}
+
+twilio:
+  messaging-service-sid: ${TWILIO_MESSAGING_SERVICE_SID}
+  account-sid: ${TWILIO_ACCOUNT_SID}
+  auth-token: ${TWILIO_TOKEN}
+  phone-number: ${TWILIO_PHONE_NUMBER}
+
+turnstile:
+  secret-key: ${TURNSTILE_SECRET_KEY}
+
+ncmec:
+  username: ${NCMEC_USERNAME}
+  password: ${NCMEC_PASSWORD}
+  submit-url: ${NCMEC_SUBMIT_URL:https://report.cybertip.org/ispws/submit}
+
+media-processor:
+  base-url: ${MEDIA_PROCESSOR_BASE_URL:http://localhost:9090}
+  ncmec-bank-endpoint: ${MEDIA_PROCESSOR_NCMEC_BANK_ENDPOINT:/internal/ncmec/bank}
+
+csam:
+  messaging:
+    enabled: ${CSAM_MESSAGING_ENABLED:true}
+    exchange: ${CSAM_MESSAGING_EXCHANGE:csam.exchange}
+    analysis-request-queue: ${CSAM_ANALYSIS_REQUEST_QUEUE:csam.analysis.requests}
+    analysis-request-routing-key: ${CSAM_ANALYSIS_REQUEST_ROUTING_KEY:csam.analysis.request}
+    analysis-result-queue: ${CSAM_ANALYSIS_RESULT_QUEUE:csam.analysis.results}
+    analysis-result-routing-key: ${CSAM_ANALYSIS_RESULT_ROUTING_KEY:csam.analysis.result}
+
+rate-limit:
+  global-per-ip-per-hour: 12000
+  api-fallback-per-hour: 2000
+  sensitive:
+    messages-per-minute: 30
+    register-per-ip-normal-per-hour: 50
+    register-per-ip-flagged-per-hour: 20
+    login-per-ip-ten-minutes: 80
+    forgot-password-per-ip-per-hour: 12
+    phone-password-reset-verify-per-ip-per-hour: 30
+    reset-password-per-ip-per-hour: 30
+    claim-account-per-ip-per-hour: 50
+    email-verification-per-user-per-hour: 5
+    email-verification-per-ip-per-hour: 20
+    request-email-update-per-user-per-hour: 5
+    request-email-update-per-ip-per-hour: 20
+    change-username-per-user-per-day: 5
+    phone-verification-per-ip-normal-per-hour: 10
+    phone-verification-per-ip-flagged-per-hour: 5
+    ads-serve-per-hour: 200
+    room-messages-per-minute: 240
+    top-reacted-messages-per-minute: 120
+    room-heartbeat-per-minute: 120
+    room-active-switch-per-minute: 60
+    private-chat-create-per-minute: 10
+  controllers:
+    auth-per-hour: 1000
+    users-per-hour: 1500
+    chatting-per-hour: 1800
+    chat-rooms-per-hour: 3000
+    ads-per-hour: 600
+    settings-per-hour: 1000
+    report-cases-per-hour: 600
+    admin-per-hour: 600
+    private-chats-per-hour: 1200
+
+logging:
+  level:
+    root: INFO
+    com.mk3.chatapp: INFO
+    com.example.adsportalbe: INFO
+    org.springframework.web: INFO
+    org.springframework.web.multipart: INFO
