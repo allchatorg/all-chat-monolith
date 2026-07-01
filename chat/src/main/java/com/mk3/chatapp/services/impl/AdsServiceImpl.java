@@ -2,19 +2,16 @@ package com.mk3.chatapp.services.impl;
 
 import com.mk3.chatapp.dtos.AttachmentDTO;
 import com.mk3.chatapp.dtos.AttachmentTypeDTO;
-import com.mk3.chatapp.dtos.requests.ServeAdRequestDto;
 import com.mk3.chatapp.dtos.responses.AdvertResponseDTO;
 import com.mk3.chatapp.dtos.responses.ServedAdDto;
 import com.mk3.chatapp.enums.AttachmentTypeEnum;
 import com.mk3.chatapp.enums.MimeType;
+import com.mk3.chatapp.services.AdServingPort;
 import com.mk3.chatapp.services.AdsService;
 import com.mk3.chatapp.services.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.security.Principal;
 import java.time.Instant;
@@ -29,35 +26,21 @@ import java.util.Random;
 public class AdsServiceImpl implements AdsService {
 
     private final UserService userService;
-    private final RestTemplate restTemplate;
-
-    @Value("${ads.service.url:http://localhost:8081/api}")
-    private String adsServiceUrl;
+    private final AdServingPort adServingPort;
 
 
     @Override
     public AdvertResponseDTO serveAd(Principal user, String ipAddress) {
         try {
-            ServeAdRequestDto request = new ServeAdRequestDto(userService.getPrincipal(user).getId(), ipAddress);
-            String url = adsServiceUrl;
+            Long userId = userService.getPrincipal(user).getId();
 
-            ResponseEntity<ServedAdDto> response = restTemplate.postForEntity(
-                    url,
-                    request,
-                    ServedAdDto.class
-            );
+            ServedAdDto servedAdDto = adServingPort.serveAd(userId, ipAddress);
 
-            if (response.getStatusCode().is2xxSuccessful()) {
-                ServedAdDto servedAdDto = response.getBody();
-
-                if (servedAdDto == null) {
-                    return null;
-                }
-
-                return convertToAdvertResponse(servedAdDto);
+            if (servedAdDto == null) {
+                return null;
             }
 
-            throw new RuntimeException("Serving ad failed with status: " + response.getStatusCode());
+            return convertToAdvertResponse(servedAdDto);
         } catch (Exception e) {
             throw new RuntimeException("Failed to serve ad", e);
         }
