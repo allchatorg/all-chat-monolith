@@ -41,6 +41,12 @@ public class SecurityExpression {
         return currentUser.getRole() == Role.ADMIN || currentUser.getRole() == Role.SUPER_ADMIN;
     }
 
+    public boolean isSuperAdmin() {
+        var currentUser = securityService.getCurrentUser();
+        if (currentUser == null) return false;
+        return currentUser.getRole() == Role.SUPER_ADMIN;
+    }
+
     public boolean isStaffMember() {
         var currentUser = securityService.getCurrentUser();
         return currentUser != null && currentUser.getRole().isStaffMember();

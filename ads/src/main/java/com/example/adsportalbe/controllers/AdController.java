@@ -8,6 +8,7 @@ import com.example.adsportalbe.models.ad.Ad;
 import com.example.adsportalbe.models.payment.PaymentReceipt;
 import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.models.identity.User;
+import com.mk3.chatapp.services.SecurityService;
 import com.example.adsportalbe.services.AdService;
 import com.example.adsportalbe.services.AdStatisticsService;
 import com.stripe.exception.StripeException;
@@ -16,8 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -31,10 +30,16 @@ public class AdController {
 
     private final AdService adService;
     private final AdStatisticsService adStatisticsService;
+    // Resolve the current user via chat's SecurityService (auth name -> DB lookup).
+    // @AuthenticationPrincipal does NOT work under the merged session auth: the Redis
+    // session stores the principal as the user-id name, not a com.mk3.chatapp User,
+    // so binding it as a User parameter always yields null. See SecurityService.
+    private final SecurityService securityService;
 
     @PostMapping
-    public ResponseEntity<CreateAdResponseDto> createAd(@RequestBody CreateAdRequestDto request,
-                                                        @AuthenticationPrincipal User user) throws StripeException {
+    public ResponseEntity<CreateAdResponseDto> createAd(@RequestBody CreateAdRequestDto request)
+            throws StripeException {
+        User user = securityService.getCurrentUser();
         if (user == null) {
             throw new RuntimeException("User not found");
         }
@@ -64,8 +69,8 @@ public class AdController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<AdDto>> searchAds(@ModelAttribute AdSearchRequestDto request,
-                                                 @AuthenticationPrincipal User user) {
+    public ResponseEntity<Page<AdDto>> searchAds(@ModelAttribute AdSearchRequestDto request) {
+        User user = securityService.getCurrentUser();
         if (user == null) {
             throw new RuntimeException("User not found");
         }
@@ -97,8 +102,8 @@ public class AdController {
     }
 
     @GetMapping("/status-counts-by-user")
-    public ResponseEntity<List<AdStatusCountDto>> getAdStatusCountsByUserId(
-            @AuthenticationPrincipal User user) {
+    public ResponseEntity<List<AdStatusCountDto>> getAdStatusCountsByUserId() {
+        User user = securityService.getCurrentUser();
         if (user == null) {
             throw new RuntimeException("User not found");
         }
@@ -109,8 +114,8 @@ public class AdController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AdDetailedViewDto> getAdById(@PathVariable Long id,
-                                                       @AuthenticationPrincipal User user) {
+    public ResponseEntity<AdDetailedViewDto> getAdById(@PathVariable Long id) {
+        User user = securityService.getCurrentUser();
         if (user == null) {
             throw new RuntimeException("User not found");
         }
@@ -142,8 +147,8 @@ public class AdController {
     @GetMapping("/{id}/daily-stats")
     public ResponseEntity<AdDailyStatsResponseDto> getAdDailyStats(
             @PathVariable Long id,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
-            @AuthenticationPrincipal User user) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate) {
+        User user = securityService.getCurrentUser();
         if (user == null) {
             throw new RuntimeException("User not found");
         }
@@ -157,8 +162,8 @@ public class AdController {
      * yesterday's views, total views bought, and total served views across all ads.
      */
     @GetMapping("/my-stats/summary")
-    public ResponseEntity<UserAdViewsSummaryDto> getUserAdViewsSummary(
-            @AuthenticationPrincipal User user) {
+    public ResponseEntity<UserAdViewsSummaryDto> getUserAdViewsSummary() {
+        User user = securityService.getCurrentUser();
         if (user == null) {
             throw new RuntimeException("User not found");
         }
@@ -174,8 +179,8 @@ public class AdController {
      */
     @GetMapping("/my-stats/daily")
     public ResponseEntity<UserAdViewsDailyBreakdownDto> getUserAdViewsDailyBreakdown(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
-            @AuthenticationPrincipal User user) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate) {
+        User user = securityService.getCurrentUser();
         if (user == null) {
             throw new RuntimeException("User not found");
         }

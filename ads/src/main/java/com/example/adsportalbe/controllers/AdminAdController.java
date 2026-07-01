@@ -3,6 +3,7 @@ package com.example.adsportalbe.controllers;
 import com.example.adsportalbe.dto.ad.*;
 import com.example.adsportalbe.dto.requests.AdSearchRequestDto;
 import com.mk3.chatapp.models.identity.User;
+import com.mk3.chatapp.services.SecurityService;
 import com.example.adsportalbe.services.AdService;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
@@ -10,8 +11,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -20,10 +19,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/ads-portal/admin/ads")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("@security.isAdmin()")
 public class AdminAdController {
 
     private final AdService adService;
+    private final SecurityService securityService;
 
     @GetMapping
     public ResponseEntity<Page<AdDto>> searchAds(@ModelAttribute AdSearchRequestDto request) {
@@ -44,6 +44,7 @@ public class AdminAdController {
     }
 
     @GetMapping("/purchased-counts")
+    @PreAuthorize("@security.isSuperAdmin()")
     public ResponseEntity<PurchasedAdsDailyCountDto> getPurchasedAdsCounts(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate) {
         PurchasedAdsDailyCountDto result = adService.getPurchasedAdsDailyCounts(fromDate);
@@ -51,26 +52,29 @@ public class AdminAdController {
     }
 
     @GetMapping("/revenue/daily-summary")
+    @PreAuthorize("@security.isSuperAdmin()")
     public ResponseEntity<RevenueDto> getDailyRevenue() {
         RevenueDto result = adService.getDailyRevenueStats();
         return ResponseEntity.ok(result);
     }
 
     @GetMapping("/revenue/monthly")
+    @PreAuthorize("@security.isSuperAdmin()")
     public ResponseEntity<MonthlyRevenueResponseDto> getMonthlyRevenue() {
         MonthlyRevenueResponseDto result = adService.getMonthlyRevenueStats();
         return ResponseEntity.ok(result);
     }
 
     @GetMapping("/revenue/weekly")
+    @PreAuthorize("@security.isSuperAdmin()")
     public ResponseEntity<WeeklyRevenueResponseDto> getWeeklyRevenue() {
         WeeklyRevenueResponseDto result = adService.getWeeklyRevenueStats();
         return ResponseEntity.ok(result);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AdDetailedViewDto> getAdById(@PathVariable Long id,
-                                                       @AuthenticationPrincipal User user) {
+    public ResponseEntity<AdDetailedViewDto> getAdById(@PathVariable Long id) {
+        User user = securityService.getCurrentUser();
         if (user == null) {
             throw new RuntimeException("User not found");
         }

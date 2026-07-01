@@ -345,8 +345,12 @@ public class AdStatisticsService {
         }
         Ad ad = ads.get(0);
 
-        // Check ownership
-        if (user.getRole() != com.mk3.chatapp.enums.Role.ADMIN && !ad.getOwner().getId().equals(user.getId())) {
+        // Access control: regular users may only view stats for their own ads;
+        // staff (MODERATOR/ADMIN/SUPER_ADMIN) may view any ad's stats. This mirrors
+        // AdServiceImpl#getAdById so the same accounts that can open an ad can also
+        // see its stats. Role is a hierarchy (SUPER_ADMIN > ADMIN > MODERATOR), so an
+        // exact `!= ADMIN` check wrongly excluded SUPER_ADMIN and broke the admin view.
+        if (user.getRole() == com.mk3.chatapp.enums.Role.USER && !ad.getOwner().getId().equals(user.getId())) {
             throw new RuntimeException("You do not have permission to view stats for this ad.");
         }
 
