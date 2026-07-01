@@ -3,6 +3,7 @@ package com.example.adsportalbe.services;
 import com.example.adsportalbe.dto.CachedAd;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,8 @@ public class AdCacheService {
     private static final String AD_ACTIVE_SET_KEY = "ad:active_set";
     private static final String AD_DETAILS_KEY_PREFIX = "ad:details:";
     private static final String AD_VIEWS_KEY_PREFIX = "ad:views:";
+
+    @Qualifier("adsRedisTemplate")
     private final RedisTemplate<String, Object> redisTemplate;
 
     public void cacheAd(CachedAd ad) {

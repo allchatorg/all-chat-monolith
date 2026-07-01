@@ -1,6 +1,5 @@
 package com.example.adsportalbe.jobs;
 
-import com.example.adsportalbe.dto.AdImpressionDto;
 import com.example.adsportalbe.services.AdCacheService;
 import com.example.adsportalbe.services.AdImpressionCacheService;
 import com.example.adsportalbe.services.AdStatisticsService;
@@ -9,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Set;
 
 @Component
@@ -36,17 +34,24 @@ public class AdImpressionProcessingJob {
 
         for (Long adId : activeAdIds) {
             try {
-                List<AdImpressionDto> impressions = adImpressionCacheService.popImpressionsByAdId(adId);
+                AdImpressionCacheService.PoppedImpressions popped =
+                        adImpressionCacheService.popImpressionsByAdId(adId);
 
-                if (impressions.isEmpty()) {
+                if (popped.processingKey() == null) {
+                    // Nothing was claimed for this ad.
                     continue;
                 }
 
-//                log.info("Processing {} impressions for ad ID: {}", impressions.size(), adId);
-                adStatisticsService.processImpressionsForAd(adId, impressions);
+                if (!popped.isEmpty()) {
+//                    log.info("Processing {} impressions for ad ID: {}", popped.impressions().size(), adId);
+                    adStatisticsService.processImpressionsForAd(adId, popped.impressions());
+                }
+
+                // Only drop the buffered impressions once they are durably persisted.
+                adImpressionCacheService.deleteProcessingKey(popped.processingKey());
             } catch (Exception e) {
                 log.error("Failed to process impressions for ad ID: {}", adId, e);
-                // Continue processing other ads even if one fails
+                // Leave the processing key in place so impressions are retried, not lost.
             }
         }
     }

@@ -6,10 +6,12 @@ import com.example.adsportalbe.models.ad.AdImpression;
 import com.example.adsportalbe.repositories.AdImpressionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,6 +24,8 @@ public class AdImpressionCacheService {
 
     private static final String GLOBAL_IMPRESSION_KEY = "ad:impression:global";
     private static final String AD_IMPRESSION_KEY_PREFIX = "ad:impression:";
+
+    @Qualifier("adsRedisTemplate")
     private final RedisTemplate<String, Object> redisTemplate;
     private final AdImpressionRepository adImpressionRepository;
     private final AdService adService;
@@ -79,25 +83,24 @@ public class AdImpressionCacheService {
         List<Object> objects = redisTemplate.opsForList().range(processingKey, 0, -1);
         redisTemplate.delete(processingKey);
 
-        if (objects == null) {
-            return List.of();
-        }
-
-        return objects.stream()
-                .filter(obj -> obj instanceof AdImpressionDto)
-                .map(obj -> (AdImpressionDto) obj)
-                .collect(Collectors.toList());
+        return toImpressionDtos(objects, processingKey);
     }
 
     /**
-     * Pops all impressions for a specific ad atomically.
+     * Pops all impressions for a specific ad atomically into a private processing
+     * key. The processing key is NOT deleted here: the caller must call
+     * {@link #deleteProcessingKey(String)} only after the impressions have been
+     * durably persisted, so a failure during processing does not silently lose
+     * the buffered impressions.
      *
      * @param adId the ID of the ad
-     * @return list of ad impression DTOs for the given ad
+     * @return holder with the processing key and the parsed impression DTOs; an
+     * {@link PoppedImpressions#empty()} holder (null key) when there was nothing
+     * to pop
      */
-    public List<AdImpressionDto> popImpressionsByAdId(Long adId) {
+    public PoppedImpressions popImpressionsByAdId(Long adId) {
         if (adId == null) {
-            return List.of();
+            return PoppedImpressions.empty();
         }
 
         String adImpressionKey = AD_IMPRESSION_KEY_PREFIX + adId;
@@ -105,25 +108,70 @@ public class AdImpressionCacheService {
 
         try {
             if (Boolean.FALSE.equals(redisTemplate.hasKey(adImpressionKey))) {
-                return List.of();
+                return PoppedImpressions.empty();
             }
             redisTemplate.rename(adImpressionKey, processingKey);
         } catch (Exception e) {
             log.debug("No impressions to pop for ad ID: {}", adId);
-            return List.of();
+            return PoppedImpressions.empty();
         }
 
         List<Object> objects = redisTemplate.opsForList().range(processingKey, 0, -1);
-        redisTemplate.delete(processingKey);
+        return new PoppedImpressions(processingKey, toImpressionDtos(objects, processingKey));
+    }
 
-        if (objects == null) {
+    /**
+     * Deletes a processing key produced by {@link #popImpressionsByAdId(Long)}.
+     * Call this only after the popped impressions have been persisted.
+     *
+     * @param processingKey the processing key to delete (no-op if null)
+     */
+    public void deleteProcessingKey(String processingKey) {
+        if (processingKey != null) {
+            redisTemplate.delete(processingKey);
+        }
+    }
+
+    /**
+     * Converts raw Redis list elements into {@link AdImpressionDto}s, logging a
+     * warning for any element that did not deserialize back to that type instead
+     * of silently dropping it.
+     */
+    private List<AdImpressionDto> toImpressionDtos(List<Object> objects, String sourceKey) {
+        if (objects == null || objects.isEmpty()) {
             return List.of();
         }
 
-        return objects.stream()
-                .filter(obj -> obj instanceof AdImpressionDto)
-                .map(obj -> (AdImpressionDto) obj)
-                .collect(Collectors.toList());
+        List<AdImpressionDto> result = new ArrayList<>(objects.size());
+        int dropped = 0;
+        for (Object obj : objects) {
+            if (obj instanceof AdImpressionDto dto) {
+                result.add(dto);
+            } else {
+                dropped++;
+                log.warn("Dropping non-AdImpressionDto element from {} (type={})",
+                        sourceKey, obj == null ? "null" : obj.getClass().getName());
+            }
+        }
+        if (dropped > 0) {
+            log.warn("Dropped {} undeserializable impression(s) while popping {}", dropped, sourceKey);
+        }
+        return result;
+    }
+
+    /**
+     * Snapshot of impressions claimed from Redis for processing, paired with the
+     * Redis processing key holding them so the caller can delete it once the
+     * impressions are durably persisted.
+     */
+    public record PoppedImpressions(String processingKey, List<AdImpressionDto> impressions) {
+        public static PoppedImpressions empty() {
+            return new PoppedImpressions(null, List.of());
+        }
+
+        public boolean isEmpty() {
+            return impressions.isEmpty();
+        }
     }
 
     /**

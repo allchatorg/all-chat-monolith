@@ -310,14 +310,22 @@ public class AdStatisticsService {
         adCacheService.removeAd(adId);
 
         // Pop and process impressions immediately
-        List<AdImpressionDto> impressions = adImpressionCacheService.popImpressionsByAdId(adId);
-        if (!impressions.isEmpty()) {
-            processImpressionsForAd(adId, impressions);
+        AdImpressionCacheService.PoppedImpressions popped = adImpressionCacheService.popImpressionsByAdId(adId);
+        if (popped.processingKey() == null) {
+            log.info("Ad {} reached completion threshold. Removed from cache. No cached impressions to process.", adId);
+            return;
+        }
+
+        if (!popped.isEmpty()) {
+            processImpressionsForAd(adId, popped.impressions());
             log.info("Ad {} reached completion threshold. Removed from cache and processed {} impressions immediately.",
-                    adId, impressions.size());
+                    adId, popped.impressions().size());
         } else {
             log.info("Ad {} reached completion threshold. Removed from cache. No cached impressions to process.", adId);
         }
+
+        // Only drop the buffered impressions once they are durably persisted.
+        adImpressionCacheService.deleteProcessingKey(popped.processingKey());
     }
 
     /**
