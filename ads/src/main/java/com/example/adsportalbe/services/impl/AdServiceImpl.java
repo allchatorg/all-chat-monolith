@@ -4,7 +4,6 @@ import com.example.adsportalbe.dto.ad.*;
 import com.example.adsportalbe.dto.payment.PaymentMethodDto;
 import com.example.adsportalbe.dto.requests.AdSearchRequestDto;
 import com.example.adsportalbe.enums.AdStatus;
-import com.mk3.chatapp.enums.Role;
 import com.example.adsportalbe.mappers.AdMapper;
 import com.example.adsportalbe.models.ad.*;
 import com.mk3.chatapp.models.identity.User;
@@ -53,6 +52,12 @@ public class AdServiceImpl implements AdService {
     @Override
     @Transactional
     public Ad createAd(CreateAdRequestDto request, User user) throws StripeException {
+        // 0. Only claimed accounts may create ads (defense-in-depth; the controller
+        //    also rejects unclaimed/guest sessions with a 403).
+        if (user == null || !user.isClaimed()) {
+            throw new IllegalStateException("Account must be claimed to create an ad");
+        }
+
         // 1. Validate Input Basics
         if (request.getTitle() == null || request.getTitle().isEmpty()) {
             throw new IllegalArgumentException("Title cannot be empty");
@@ -217,8 +222,10 @@ public class AdServiceImpl implements AdService {
         Ad ad = adRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ad not found with id: " + id));
 
-        // Access control: regular users can only view their own ads
-        if (user.getRole() == Role.USER) {
+        // Access control: non-staff users can only view their own ads. Uses
+        // isStaffMember() rather than == Role.USER so UNCLAIMED_USER / GUEST are
+        // also scoped (see ads-role-checks-hierarchy).
+        if (!user.getRole().isStaffMember()) {
             if (!ad.getOwner().getId().equals(user.getId())) {
                 throw new RuntimeException("Access denied: You can only view your own ads");
             }

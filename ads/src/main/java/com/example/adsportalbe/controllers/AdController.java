@@ -6,7 +6,6 @@ import com.example.adsportalbe.dto.ad.*;
 import com.example.adsportalbe.dto.requests.AdSearchRequestDto;
 import com.example.adsportalbe.models.ad.Ad;
 import com.example.adsportalbe.models.payment.PaymentReceipt;
-import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.services.SecurityService;
 import com.example.adsportalbe.services.AdService;
@@ -16,8 +15,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -42,6 +43,12 @@ public class AdController {
         User user = securityService.getCurrentUser();
         if (user == null) {
             throw new RuntimeException("User not found");
+        }
+        // Only claimed accounts may create ads. Guest / unclaimed sessions must
+        // claim their account first (the frontend surfaces a claim popup); this is
+        // the server-side backstop so the flow can't be bypassed via the API.
+        if (!user.isClaimed()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account must be claimed to create an ad");
         }
 
         Ad ad = adService.createAd(request, user);
@@ -75,8 +82,10 @@ public class AdController {
             throw new RuntimeException("User not found");
         }
 
-        // For regular users (non-admin), enforce userId validation
-        if (user.getRole() == Role.USER) {
+        // For non-staff users, enforce userId validation. Uses isStaffMember()
+        // rather than an exact == Role.USER check so UNCLAIMED_USER / GUEST are
+        // also scoped to their own ads (see ads-role-checks-hierarchy).
+        if (!user.getRole().isStaffMember()) {
             // Check if userId is provided
             if (request.userId() == null) {
                 return ResponseEntity.status(403)
