@@ -4,6 +4,7 @@ import com.mk3.chatapp.dtos.BanResponseDTO;
 import com.mk3.chatapp.dtos.WarnUserRequestDTO;
 import com.mk3.chatapp.dtos.requests.*;
 import com.mk3.chatapp.dtos.responses.*;
+import com.mk3.chatapp.enums.BanType;
 import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.enums.WebSocketMessageType;
 import com.mk3.chatapp.mappers.AuditLogCustomMapper;
@@ -17,6 +18,7 @@ import com.mk3.chatapp.services.*;
 import com.mk3.chatapp.specifications.AuditLogSpecification;
 import com.mk3.chatapp.utils.Utils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -26,10 +28,12 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AdminFacadeServiceImpl implements AdminFacadeService {
     private final BanService banService;
+    private final AdsModerationPort adsModerationPort;
     private final UserService userService;
     private final SecurityService securityService;
     private final MessagesService messagesService;
@@ -47,7 +51,25 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
     @Override
     @PreAuthorize("hasAnyAuthority(T(com.mk3.chatapp.enums.Permission).BAN_USERS.getPermission())")
     public AuditLog banUser(BanRequestDTO banRequestDTO) {
-        return banService.banUser(banRequestDTO, securityService.getCurrentUser());
+        AuditLog auditLog = banService.banUser(banRequestDTO, securityService.getCurrentUser());
+
+        // The ban transaction is committed inside banService.banUser, so the
+        // refunds run after it — a payment-provider failure can never fail or
+        // roll back the ban.
+        if (banRequestDTO.banType() == BanType.PERMANENT) {
+            try {
+                var result = adsModerationPort.refundPendingAdPurchases(banRequestDTO.userId());
+                if (result.attempted() > 0) {
+                    log.info("Permanent ban of user {}: refunded {}/{} pending ad purchase(s), total {} {}",
+                            banRequestDTO.userId(), result.refunded(), result.attempted(),
+                            result.totalRefunded(), result.currency());
+                }
+            } catch (Exception e) {
+                log.error("Failed to refund pending ad purchases for banned user {}",
+                        banRequestDTO.userId(), e);
+            }
+        }
+        return auditLog;
     }
 
     @Override

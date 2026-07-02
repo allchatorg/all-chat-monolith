@@ -19,6 +19,17 @@ public interface AdService {
 
     List<AdStatusCountDto> getAdStatusCountsByUserId(Long userId);
 
+    BanAdsSummaryDto getBanAdsSummary(Long userId);
+
+    /**
+     * Cancels the payment authorization for every pending (SUBMITTED +
+     * AUTHORIZED) ad of the user, marking each ad REJECTED and its receipt
+     * CANCELLED. Per-ad failures are logged and skipped, never thrown.
+     */
+    PendingAdRefundOutcome refundPendingAdsForUser(Long userId);
+
+    record PendingAdRefundOutcome(int attempted, int refunded, double totalRefunded, String currency) {}
+
     AdDetailedViewDto getAdById(Long id, User user);
 
     AdDetailedViewDto rejectAd(Long adId, String rejectionReason) throws StripeException;

@@ -218,6 +218,81 @@ public class AdServiceImpl implements AdService {
     }
 
     @Override
+    public BanAdsSummaryDto getBanAdsSummary(Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID cannot be null");
+        }
+
+        Map<AdStatus, Long> counts = adRepository.getAdStatusCountsByUserId(userId).stream()
+                .collect(Collectors.toMap(AdStatusCountDto::getStatus, AdStatusCountDto::getCount));
+        long totalAds = counts.values().stream().mapToLong(Long::longValue).sum();
+
+        List<Ad> refundableAds = adRepository.findPendingRefundableAdsByOwnerId(userId);
+        double pendingRefundTotal = refundableAds.stream()
+                .mapToDouble(AdServiceImpl::refundableAmount)
+                .sum();
+        String currency = refundableAds.stream()
+                .map(ad -> ad.getReceipt().getCurrency())
+                .filter(c -> c != null && !c.isBlank())
+                .findFirst()
+                .orElse("USD");
+
+        return new BanAdsSummaryDto(
+                totalAds,
+                counts.getOrDefault(AdStatus.SUBMITTED, 0L),
+                counts.getOrDefault(AdStatus.ACTIVE, 0L),
+                counts.getOrDefault(AdStatus.COMPLETED, 0L),
+                counts.getOrDefault(AdStatus.REJECTED, 0L),
+                refundableAds.size(),
+                pendingRefundTotal,
+                currency);
+    }
+
+    @Override
+    @Transactional
+    public PendingAdRefundOutcome refundPendingAdsForUser(Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID cannot be null");
+        }
+
+        List<Ad> refundableAds = adRepository.findPendingRefundableAdsByOwnerId(userId);
+        int refunded = 0;
+        double totalRefunded = 0;
+        String currency = "USD";
+
+        for (Ad ad : refundableAds) {
+            PaymentReceipt receipt = ad.getReceipt();
+            try {
+                paymentService.cancelPaymentAuthorization(receipt.getStripePaymentIntentId());
+
+                receipt.setStatus("CANCELLED");
+                ad.setStatus(AdStatus.REJECTED);
+                ad.setRejectionReason("Owner permanently banned — payment authorization cancelled and refunded in full.");
+                adRepository.save(ad);
+
+                refunded++;
+                totalRefunded += refundableAmount(ad);
+                if (receipt.getCurrency() != null && !receipt.getCurrency().isBlank()) {
+                    currency = receipt.getCurrency();
+                }
+            } catch (Exception e) {
+                // One failed refund must not abort the others; the ban itself
+                // has already been committed by the chat module.
+                log.error("Ban-refund failed for ad {} (user {}): {}", ad.getId(), userId, e.getMessage());
+            }
+        }
+
+        return new PendingAdRefundOutcome(refundableAds.size(), refunded, totalRefunded, currency);
+    }
+
+    private static double refundableAmount(Ad ad) {
+        if (ad.getReceipt().getAmountPaid() != null) {
+            return ad.getReceipt().getAmountPaid();
+        }
+        return ad.getTotalCost() != null ? ad.getTotalCost() : 0;
+    }
+
+    @Override
     public AdDetailedViewDto getAdById(Long id, User user) {
         Ad ad = adRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Ad not found with id: " + id));

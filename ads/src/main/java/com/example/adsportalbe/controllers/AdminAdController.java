@@ -43,6 +43,15 @@ public class AdminAdController {
         return ResponseEntity.ok(result);
     }
 
+    // Staff-level (not admin) because moderators can ban users and need this
+    // summary in the ban form; the method-level check overrides the class-level one.
+    @GetMapping("/ban-summary/{userId}")
+    @PreAuthorize("@security.isStaffMember()")
+    public ResponseEntity<BanAdsSummaryDto> getBanAdsSummary(@PathVariable Long userId) {
+        BanAdsSummaryDto result = adService.getBanAdsSummary(userId);
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/purchased-counts")
     @PreAuthorize("@security.isSuperAdmin()")
     public ResponseEntity<PurchasedAdsDailyCountDto> getPurchasedAdsCounts(
