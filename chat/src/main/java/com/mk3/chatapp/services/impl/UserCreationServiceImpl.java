@@ -56,7 +56,7 @@ public class UserCreationServiceImpl implements UserCreationService {
                 .verified(true)
                 .totalUploadUsage(0L)
                 .displayColor(Utils.generateRandomHexColor())
-                .role(Role.MODERATOR)
+                .role(Role.ADMIN)
                 .build();
         jane = userRepository.save(jane);
 
@@ -85,7 +85,10 @@ public class UserCreationServiceImpl implements UserCreationService {
         joinUserToStaffChatRooms(john);
 
         userChatRoomRepository.save(UserChatRoom.builder().user(jane).chatRoom(homeRoom).build());
+        joinUserToStaffChatRooms(jane);
+
         userChatRoomRepository.save(UserChatRoom.builder().user(alice).chatRoom(homeRoom).build());
+        joinUserToStaffChatRooms(alice);
 
         // Create second chat room
         ChatRoom randomRoom = ChatRoom.builder()
