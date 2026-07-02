@@ -20,6 +20,7 @@ public record UserDTO(
         Boolean subscribedToMarketingEmails,
         Boolean appliedForModerator,
         Role role,
+        Long purchasedAdsCount,
         Long totalUploadUsage,
         String displayColor,
         List<TagDTO> blurredContentTags,
