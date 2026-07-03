@@ -24,6 +24,9 @@ public class UserSpecification {
                                 "%" + filterDto.email().toLowerCase() + "%"));
             }
 
+            // The ads-portal user list only shows advertisers, not the whole user base.
+            predicates.add(criteriaBuilder.greaterThan(root.get("purchasedAdsCount"), 0L));
+
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }
