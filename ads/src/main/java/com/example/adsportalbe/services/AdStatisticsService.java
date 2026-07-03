@@ -11,6 +11,7 @@ import com.example.adsportalbe.models.ad.Ad;
 import com.example.adsportalbe.models.ad.AdDailyStatistics;
 import com.example.adsportalbe.models.ad.AdImpression;
 import com.mk3.chatapp.models.identity.User;
+import com.mk3.chatapp.services.FileUploadService;
 import com.example.adsportalbe.repositories.AdDailyStatisticsRepository;
 import com.example.adsportalbe.repositories.AdImpressionRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,7 @@ public class AdStatisticsService {
     private final AdDailyStatisticsRepository adDailyStatisticsRepository;
     private final AdCacheService adCacheService;
     private final AdImpressionCacheService adImpressionCacheService;
+    private final FileUploadService fileUploadService;
 
     @Transactional
     public void processImpressions(List<AdImpressionDto> impressionDtos) {
@@ -299,8 +301,10 @@ public class AdStatisticsService {
                 .id(cachedAd.getId())
                 .title(cachedAd.getTitle())
                 .textContent(cachedAd.getTextContent())
-                .imageUrl(cachedAd.getImageUrl())
-                .videoUrl(cachedAd.getVideoUrl())
+                // Cached values are storage keys; resolve at serve time because
+                // dev presigned URLs expire while cache entries live long.
+                .imageUrl(fileUploadService.getFileUrl(cachedAd.getImageUrl()))
+                .videoUrl(fileUploadService.getFileUrl(cachedAd.getVideoUrl()))
                 .format(cachedAd.getFormat() != null ? cachedAd.getFormat().name() : null)
                 .build();
     }

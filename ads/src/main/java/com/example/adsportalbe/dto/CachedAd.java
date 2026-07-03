@@ -16,6 +16,8 @@ public class CachedAd implements Serializable {
     private Long id;
     private String title;
     private AdFormatType format; // Or format title
+    // imageUrl/videoUrl hold bare storage object keys (e.g. "dev/uuid_file.png"),
+    // resolved to real URLs at serve time via FileUploadService.getFileUrl.
     private String imageUrl;
     private String videoUrl;
     private String textContent;

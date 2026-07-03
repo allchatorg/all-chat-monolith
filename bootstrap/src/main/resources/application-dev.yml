@@ -59,14 +59,6 @@ app:
   cdn:
     domain: ${APP_CDN_DOMAIN:https://cdn.allchat.org}
 
-cloudflare:
-  r2:
-    access-key: ${CLOUDFLARE_ACCESS_KEY:}
-    secret-key: ${CLOUDFLARE_SECRET_KEY:}
-    bucket-name: ${CLOUDFLARE_BUCKET_NAME:dev-bucket}
-    endpoint: ${CLOUDFLARE_ENDPOINT:https://example.r2.cloudflarestorage.com}
-    public-url: ${CLOUDFLARE_PUBLIC_URL:https://cdn.example.com}
-
 stripe:
   api-key: ${STRIPE_API_KEY:sk_test_dummy}
 

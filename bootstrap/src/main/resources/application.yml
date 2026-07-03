@@ -64,14 +64,6 @@ app:
     domain: ${APP_CDN_DOMAIN:https://cdn.allchat.org}
 
 # --- ads-portal module config ---
-cloudflare:
-  r2:
-    access-key: ${CLOUDFLARE_ACCESS_KEY}
-    secret-key: ${CLOUDFLARE_SECRET_KEY}
-    bucket-name: ${CLOUDFLARE_BUCKET_NAME}
-    endpoint: ${CLOUDFLARE_ENDPOINT}
-    public-url: ${CLOUDFLARE_PUBLIC_URL}
-
 stripe:
   api-key: ${STRIPE_API_KEY}
 
