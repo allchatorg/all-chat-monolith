@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,9 +38,15 @@ public class UserCreationServiceImpl implements UserCreationService {
                 .username("john_doe")
                 .password(passwordEncoder.encode("Makedonija12!"))
                 .email("john@example.com")
+                .phoneNumber("+385915550142")
+                .phoneNumberVerificationDate(Instant.now())
                 .over18(true)
+                .overDigitalConsent(true)
+                .acceptsTermsAndPrivacy(true)
+                .acceptsPolicies(true)
                 .claimed(true)
                 .verified(true)
+                .emailVerified(true)
                 .totalUploadUsage(0L)
                 .displayColor(Utils.generateRandomHexColor())
                 .role(Role.SUPER_ADMIN)
