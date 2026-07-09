@@ -3,8 +3,8 @@ package com.mk3.chatapp.configs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mk3.chatapp.dtos.BanResponseDTO;
 import com.mk3.chatapp.dtos.ErrorDTO;
-import com.mk3.chatapp.enums.ReportType;
 import com.mk3.chatapp.enums.RequiredVerificationEnum;
+import com.mk3.chatapp.mappers.BanMapper;
 import com.mk3.chatapp.models.Ban;
 import com.mk3.chatapp.repositories.UserRepository;
 import com.mk3.chatapp.services.BanCacheService;
@@ -35,22 +35,35 @@ import static com.mk3.chatapp.utils.IpAddressUtils.getClientIpAddress;
 public class AccessRestrictionFilter extends OncePerRequestFilter {
 
     private static final String ANONYMOUS_USER = "anonymousUser";
-    private static final Map<String, Set<String>> ENDPOINT_ALLOWED_METHODS = Map.of(
-            "/api/v1/auth/**", Set.of("GET", "POST", "PUT", "DELETE", "PATCH"),
-            "/health", Set.of("GET"),
-            "/ws/**", Set.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"),
+    private static final Map<String, Set<String>> ENDPOINT_ALLOWED_METHODS = Map.ofEntries(
+            Map.entry("/api/v1/auth/**", Set.of("GET", "POST", "PUT", "DELETE", "PATCH")),
+            Map.entry("/health", Set.of("GET")),
+            Map.entry("/ws/**", Set.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")),
+            Map.entry("/api/v1/users/me", Set.of("GET")),
+            Map.entry("/api/v1/users/send-email-verification", Set.of("POST")),
+            Map.entry("/api/v1/users/verify", Set.of("PATCH")),
+            Map.entry("/api/v1/users/send-phone-verification", Set.of("POST")),
+            Map.entry("/api/v1/users/verify-phone", Set.of("PATCH")),
+            Map.entry("/api/v1/chat-rooms/**", Set.of("GET")),
+            Map.entry("/api/v1/chatting/messaging-availability", Set.of("GET")),
+            Map.entry("/api/v1/ban-appeals/**", Set.of("GET", "POST"))
+    );
+    // The only API surface reachable with an active ban: the appeal flow, identity
+    // lookup, the ping bootstrap call and logout. Deliberately excludes /ws/** so
+    // banned users cannot hold a live socket, and everything else keeps returning
+    // the ban-shaped 403. /auth/ping must stay reachable: the frontend blocks all
+    // session hydration on it, so banning it deadlocks the /banned page itself.
+    private static final Map<String, Set<String>> BANNED_USER_ALLOWED_ENDPOINTS = Map.of(
+            "/api/v1/ban-appeals/**", Set.of("GET", "POST"),
             "/api/v1/users/me", Set.of("GET"),
-            "/api/v1/users/send-email-verification", Set.of("POST"),
-            "/api/v1/users/verify", Set.of("PATCH"),
-            "/api/v1/users/send-phone-verification", Set.of("POST"),
-            "/api/v1/users/verify-phone", Set.of("PATCH"),
-            "/api/v1/chat-rooms/**", Set.of("GET"),
-            "/api/v1/chatting/messaging-availability", Set.of("GET")
+            "/api/v1/auth/ping", Set.of("GET"),
+            "/api/v1/auth/logout", Set.of("POST")
     );
     private final BanCacheService banCacheService;
     private final ObjectMapper objectMapper;
     private final IpService ipService;
     private final UserRepository userRepository;
+    private final BanMapper banMapper;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     @Override
@@ -67,7 +80,7 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
 
         if (userId != null) {
             Ban userBan = banCacheService.getBanByUserId(userId);
-            if (isBanActive(userBan)) {
+            if (isBanActive(userBan) && !isBannedUserAllowedRequest(requestUri, method)) {
                 respondWithBan(response, userBan);
                 return;
             }
@@ -138,6 +151,15 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
         return ban != null && ban.isActive();
     }
 
+    private boolean isBannedUserAllowedRequest(String requestUri, String method) {
+        for (Map.Entry<String, Set<String>> entry : BANNED_USER_ALLOWED_ENDPOINTS.entrySet()) {
+            if (pathMatcher.match(entry.getKey(), requestUri)) {
+                return entry.getValue().contains(method.toUpperCase(Locale.ROOT));
+            }
+        }
+        return false;
+    }
+
     private void respondWithBan(HttpServletResponse response, Ban ban) throws IOException {
         BanResponseDTO banDTO = createBanResponseDTO(ban);
 
@@ -147,21 +169,7 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
     }
 
     private BanResponseDTO createBanResponseDTO(Ban ban) {
-        ReportType userFacingReportType = ban.getReportType().toUserFacingReportType();
-        String userFacingDescription = ban.getReportType().toUserFacingDescription(ban.getDescription());
-
-        return new BanResponseDTO(
-                ban.getId(),
-                null,
-                null,
-                ban.getIpAddress(),
-                ban.getUserAgent(),
-                userFacingDescription,
-                ban.getExpiresAt() == null ? null : ban.getExpiresAt().toString(),
-                true,
-                ban.getType(),
-                userFacingReportType
-        );
+        return banMapper.toUserFacingDto(ban);
     }
 
     private Long getAuthenticatedUserId(Authentication authentication) {

@@ -30,6 +30,13 @@ public interface AuditLogService {
                                    String description,
                                    Long targetUserId);
 
+    BanAppealAuditLog logBanAppealResolve(String action,
+                                          String description,
+                                          Long targetUserId,
+                                          Long appealId,
+                                          Long banId,
+                                          String decision);
+
     WarningAuditLog logWarning(String action,
                                String description,
                                Long targetUserId);

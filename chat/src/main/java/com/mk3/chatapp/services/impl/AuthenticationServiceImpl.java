@@ -10,9 +10,7 @@ import com.mk3.chatapp.enums.RequiredVerificationEnum;
 import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.enums.TokenType;
 import com.mk3.chatapp.exceptions.ConflictException;
-import com.mk3.chatapp.exceptions.UserBannedException;
 import com.mk3.chatapp.mappers.UserMapper;
-import com.mk3.chatapp.models.Ban;
 import com.mk3.chatapp.models.UserActionToken;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.services.*;
@@ -48,7 +46,6 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final MailSenderService mailSenderService;
     private final UserActionTokenService tokenService;
     private final SessionManagementService sessionManagementService;
-    private final BanService banService;
 
     private final ChatRoomInteractionService chatRoomInteractionService;
     private final ChatRoomService chatRoomService;
@@ -246,11 +243,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var user = userService.findOptionalByEmail(email.trim())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
 
-        Optional<Ban> userActiveBan = banService.findUserActiveBan(user);
-
-        if (userActiveBan.isPresent()) {
-            throw new UserBannedException(userActiveBan.get());
-        }
+        // Banned users may still log in: AccessRestrictionFilter limits their session to the
+        // ban-appeal endpoints, /users/me and logout. Rejecting here would both lock them out
+        // of the appeal flow and leak ban details before the password is verified.
 
         try {
             var auth = authenticationManager.authenticate(

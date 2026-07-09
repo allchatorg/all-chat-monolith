@@ -1,8 +1,10 @@
 package com.mk3.chatapp.configs;
 
+import com.mk3.chatapp.services.BanCacheService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
@@ -22,8 +24,11 @@ import static com.mk3.chatapp.utils.IpAddressUtils.getClientIpAddress;
 @RequiredArgsConstructor
 public class HttpHandshakeInterceptor implements HandshakeInterceptor {
 
+    private static final String ANONYMOUS_USER = "anonymousUser";
+
     @Autowired
     private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
+    private final BanCacheService banCacheService;
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
@@ -43,6 +48,12 @@ public class HttpHandshakeInterceptor implements HandshakeInterceptor {
                         Authentication authentication = securityContext.getAuthentication();
                         if (authentication != null && authentication.isAuthenticated()) {
                             String username = authentication.getName();
+
+                            if (isActiveUserBan(parseUserId(username))) {
+                                response.setStatusCode(HttpStatus.FORBIDDEN);
+                                return false;
+                            }
+
                             attributes.put("username", username);
                             attributes.put("principal", authentication.getPrincipal());
                         }
@@ -52,6 +63,26 @@ public class HttpHandshakeInterceptor implements HandshakeInterceptor {
         }
 
         return true;
+    }
+
+    private Long parseUserId(String username) {
+        if (username == null || username.isBlank() || ANONYMOUS_USER.equals(username)) {
+            return null;
+        }
+
+        try {
+            return Long.parseLong(username);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private boolean isActiveUserBan(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        var ban = banCacheService.getBanByUserId(userId);
+        return ban != null && ban.isActive();
     }
 
     @Override

@@ -133,6 +133,7 @@ rate-limit:
     room-heartbeat-per-minute: 120
     room-active-switch-per-minute: 60
     private-chat-create-per-minute: 10
+    ban-appeal-submit-per-user-per-day: 2
   controllers:
     auth-per-hour: 1000
     users-per-hour: 1500
@@ -143,6 +144,7 @@ rate-limit:
     report-cases-per-hour: 600
     admin-per-hour: 600
     private-chats-per-hour: 1200
+    ban-appeals-per-hour: 30
 
 logging:
   level:

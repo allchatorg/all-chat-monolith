@@ -65,6 +65,22 @@ public class AuditLogCustomMapperImpl implements AuditLogCustomMapper {
                         userMapper.toDto(userService.findById(revokeLog.getTargetUserId())));
             }
 
+            case BAN_APPEAL_RESOLVE -> {
+                BanAppealAuditLog appealLog = (BanAppealAuditLog) auditLog;
+                return new BanAppealAuditLogDTO(
+                        appealLog.getId(),
+                        appealLog.getCreatedAt().toString(),
+                        createdBy,
+                        createdByType,
+                        appealLog.getAction(),
+                        appealLog.getDescription(),
+                        appealLog.getLogType(),
+                        userMapper.toDto(userService.findById(appealLog.getTargetUserId())),
+                        appealLog.getAppealId(),
+                        appealLog.getBanId(),
+                        appealLog.getDecision());
+            }
+
             case WARNING -> {
                 WarningAuditLog warningLog = (WarningAuditLog) auditLog;
                 return new WarningAuditLogDTO(

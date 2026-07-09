@@ -53,6 +53,21 @@ public class AuditLogServiceImpl implements AuditLogService {
 
     @Override
     @Transactional
+    public BanAppealAuditLog logBanAppealResolve(String action, String description, Long targetUserId,
+                                                 Long appealId, Long banId, String decision) {
+        requireNonNull(action, "action");
+        requireNonNull(targetUserId, "targetUserId");
+        requireNonNull(appealId, "appealId");
+        requireNonNull(banId, "banId");
+        requireNonNull(decision, "decision");
+
+        BanAppealAuditLog log = BanAppealAuditLog.builder().action(action).description(description)
+                .targetUserId(targetUserId).appealId(appealId).banId(banId).decision(decision).build();
+        return auditLogRepository.save(log);
+    }
+
+    @Override
+    @Transactional
     public WarningAuditLog logWarning(String action, String description, Long targetUserId) {
         requireNonNull(action, "action");
         requireNonNull(targetUserId, "targetUserId");

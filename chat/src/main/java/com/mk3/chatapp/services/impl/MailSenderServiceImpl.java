@@ -113,6 +113,60 @@ public class MailSenderServiceImpl implements MailSenderService {
     }
 
     @Override
+    public void sendBanAppealReceivedEmail(User user) {
+        if (user.getEmail() == null) {
+            return;
+        }
+
+        Context context = new Context();
+        context.setVariable("name", user.getApplicationUsername());
+
+        String htmlContent = templateEngine.process("BAN_APPEAL_RECEIVED_TEMPLATE", context);
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+
+            helper.setTo(user.getEmail());
+            helper.setSubject("We received your ban appeal");
+            helper.setText(htmlContent, true);
+            helper.setFrom(MAIL_USERNAME, FROM_NAME);
+
+            mailSender.send(message);
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            throw new RuntimeException("Failed to send ban appeal received email", e);
+        }
+    }
+
+    @Override
+    public void sendBanAppealDecisionEmail(User user, boolean approved, String userFacingMessage) {
+        if (user.getEmail() == null) {
+            return;
+        }
+
+        Context context = new Context();
+        context.setVariable("name", user.getApplicationUsername());
+        context.setVariable("approved", approved);
+        context.setVariable("staffMessage", userFacingMessage);
+
+        String htmlContent = templateEngine.process("BAN_APPEAL_DECISION_TEMPLATE", context);
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+
+            helper.setTo(user.getEmail());
+            helper.setSubject("Update on your ban appeal");
+            helper.setText(htmlContent, true);
+            helper.setFrom(MAIL_USERNAME, FROM_NAME);
+
+            mailSender.send(message);
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            throw new RuntimeException("Failed to send ban appeal decision email", e);
+        }
+    }
+
+    @Override
     public void sendModeratorApplicationEmail(User user,
                                               ModeratorApplicationRequest request) {
         Context context = new Context();

@@ -13,4 +13,8 @@ public interface MailSenderService {
     void sendEmailUpdateVerification(User user, String newEmail, String code);
 
     void sendModeratorApplicationEmail(User user, ModeratorApplicationRequest request);
+
+    void sendBanAppealReceivedEmail(User user);
+
+    void sendBanAppealDecisionEmail(User user, boolean approved, String userFacingMessage);
 }

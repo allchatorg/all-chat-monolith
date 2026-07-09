@@ -17,6 +17,8 @@ public interface BanService {
 
     void revokeBan(User user);
 
+    void revokeBan(User user, String auditDescription);
+
     void systemRevokeBan(User user);
 
     Page<BanResponseDTO> findActiveBans(String username, Long userId, int page, int pageSize);

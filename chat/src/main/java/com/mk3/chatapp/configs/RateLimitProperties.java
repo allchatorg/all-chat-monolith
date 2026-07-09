@@ -40,6 +40,7 @@ public class RateLimitProperties {
         private long roomHeartbeatPerMinute = 120;
         private long roomActiveSwitchPerMinute = 60;
         private long privateChatCreatePerMinute = 10;
+        private long banAppealSubmitPerUserPerDay = 5;
     }
 
     @Getter
@@ -54,5 +55,6 @@ public class RateLimitProperties {
         private long reportCasesPerHour = 600;
         private long adminPerHour = 600;
         private long privateChatsPerHour = 1_200;
+        private long banAppealsPerHour = 300;
     }
 }

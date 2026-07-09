@@ -4,12 +4,14 @@ import com.mk3.chatapp.dtos.BanResponseDTO;
 import com.mk3.chatapp.dtos.BanUserNotificationDTO;
 import com.mk3.chatapp.dtos.requests.BanRequestDTO;
 import com.mk3.chatapp.dtos.responses.BanUserMessageDTO;
+import com.mk3.chatapp.enums.BanAppealStatus;
 import com.mk3.chatapp.enums.BanType;
 import com.mk3.chatapp.enums.ReportType;
 import com.mk3.chatapp.enums.WebSocketMessageType;
 import com.mk3.chatapp.mappers.BanMapper;
 import com.mk3.chatapp.models.*;
 import com.mk3.chatapp.models.identity.User;
+import com.mk3.chatapp.repositories.BanAppealRepository;
 import com.mk3.chatapp.repositories.BanRepository;
 import com.mk3.chatapp.services.*;
 import com.mk3.chatapp.services.schedulers.BanSchedulingService;
@@ -30,6 +32,7 @@ import java.util.Optional;
 public class BanServiceImpl implements BanService {
 
     private final BanRepository banRepository;
+    private final BanAppealRepository banAppealRepository;
 
     private final BanCacheService banCacheService;
     private final SecurityService securityService;
@@ -104,6 +107,8 @@ public class BanServiceImpl implements BanService {
 
         banCacheService.removeBanEntry(ban);
 
+        expireOpenAppeal(ban);
+
         targetUser.setBanned(false);
         userService.save(targetUser);
     }
@@ -111,6 +116,12 @@ public class BanServiceImpl implements BanService {
     @Override
     @Transactional
     public void revokeBan(User targetUser) {
+        revokeBan(targetUser, "Revoked ban for userId " + targetUser.getId());
+    }
+
+    @Override
+    @Transactional
+    public void revokeBan(User targetUser, String auditDescription) {
         systemRevokeBan(targetUser);
 
         com.mk3.chatapp.models.identity.User currentUser = null;
@@ -123,9 +134,24 @@ public class BanServiceImpl implements BanService {
         if (currentUser != null) {
             auditLogService.logRevokeBan(
                     "REVOKE_BAN",
-                    "Revoked ban for userId " + targetUser.getId(),
+                    auditDescription,
                     targetUser.getId());
         }
+    }
+
+    /**
+     * Any ban revocation (manual, scheduled unban or appeal approval) closes an open appeal
+     * so it never lingers in the review queue. Appeal approval overwrites this with APPROVED
+     * as its final step.
+     */
+    private void expireOpenAppeal(Ban ban) {
+        banAppealRepository
+                .findByBan_IdAndStatusIn(ban.getId(), List.of(BanAppealStatus.PENDING, BanAppealStatus.UNDER_REVIEW))
+                .ifPresent(appeal -> {
+                    appeal.setStatus(BanAppealStatus.EXPIRED);
+                    appeal.setResolvedAt(Instant.now());
+                    banAppealRepository.save(appeal);
+                });
     }
 
     @Override

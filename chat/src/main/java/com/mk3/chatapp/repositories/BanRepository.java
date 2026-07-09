@@ -27,6 +27,8 @@ public interface BanRepository extends JpaRepository<Ban, Long> {
 
     boolean existsByUserAndActiveIs(User user, boolean active);
 
+    List<Ban> findAllByUser_IdOrderByCreatedAtDesc(Long userId);
+
     List<Ban> findByActiveIsTrueAndExpiresAtIsNotNullAndExpiresAtAfter(Instant instant);
 
     List<Ban> findByActiveIsTrueAndExpiresAtIsNotNullAndExpiresAtBefore(Instant now);

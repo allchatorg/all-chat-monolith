@@ -13,4 +13,27 @@ public interface BanMapper {
     BanResponseDTO toDto(Ban ban);
 
     Ban toEntity(BanResponseDTO banResponseDTO);
+
+    /**
+     * User-facing view of a ban: masks CSAM-related report types/descriptions and
+     * omits user identifiers. Shared by AccessRestrictionFilter and the ban appeal flow
+     * so banned users always see identical, sanitized ban details.
+     */
+    default BanResponseDTO toUserFacingDto(Ban ban) {
+        var userFacingReportType = ban.getReportType().toUserFacingReportType();
+        String userFacingDescription = ban.getReportType().toUserFacingDescription(ban.getDescription());
+
+        return new BanResponseDTO(
+                ban.getId(),
+                null,
+                null,
+                ban.getIpAddress(),
+                ban.getUserAgent(),
+                userFacingDescription,
+                ban.getExpiresAt() == null ? null : ban.getExpiresAt().toString(),
+                true,
+                ban.getType(),
+                userFacingReportType
+        );
+    }
 }

@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
@@ -40,6 +41,12 @@ public class UserInterceptor implements ChannelInterceptor {
 
             if (username != null) {
                 accessor.setUser(new UsernamePasswordAuthenticationToken(username, null));
+            }
+
+            Long userId = resolveUserId(accessor);
+            if (isActiveUserBan(userId)) {
+                log.debug("Blocked STOMP CONNECT for banned user {}", userId);
+                throw new MessagingException("Connection refused: user is banned");
             }
         }
 

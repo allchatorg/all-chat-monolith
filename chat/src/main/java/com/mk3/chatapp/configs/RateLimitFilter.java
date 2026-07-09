@@ -149,6 +149,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
                         controllers.getAdsPerHour(), null,
                         "Too many ads requests. Please try again later."),
 
+                // Ban appeals (submission attempts are capped daily; successes are capped at
+                // one per ban by the unique constraint on ban_appeal.ban_id)
+                rule("ban_appeal_submit", Set.of("POST"), "/api/v1/ban-appeals", RateLimitScope.USER_OR_IP, ONE_DAY,
+                        sensitive.getBanAppealSubmitPerUserPerDay(), null,
+                        "Too many appeal submissions. Please try again later."),
+                rule("ban_appeals_controller", ALL_METHODS, "/api/v1/ban-appeals/**", RateLimitScope.USER_OR_IP, ONE_HOUR,
+                        controllers.getBanAppealsPerHour(), null,
+                        "Too many ban-appeal requests. Please try again later."),
+
                 // Other controllers
                 rule("settings_controller", ALL_METHODS, "/api/v1/settings/**", RateLimitScope.USER_OR_IP, ONE_HOUR,
                         controllers.getSettingsPerHour(), null,

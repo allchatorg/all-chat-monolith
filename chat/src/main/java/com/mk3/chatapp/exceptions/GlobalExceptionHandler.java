@@ -6,7 +6,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -64,6 +66,17 @@ public class GlobalExceptionHandler {
         response.setContentType("application/json");
         response.setStatus(HttpStatus.FORBIDDEN.value());
         response.getWriter().write(objectMapper.writeValueAsString(ex.getBanResponse()));
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorDTO> handleResponseStatusException(ResponseStatusException ex) {
+        log.warn("ResponseStatusException: {} {}", ex.getStatusCode(), ex.getReason());
+        HttpStatus status = HttpStatus.valueOf(ex.getStatusCode().value());
+        return ResponseEntity.status(status).body(new ErrorDTO(
+                status.value(),
+                status.getReasonPhrase(),
+                ex.getReason(),
+                LocalDateTime.now()));
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
