@@ -144,7 +144,7 @@ rate-limit:
     report-cases-per-hour: 600
     admin-per-hour: 600
     private-chats-per-hour: 1200
-    ban-appeals-per-hour: 30
+    ban-appeals-per-hour: 60
 
 logging:
   level:

@@ -75,9 +75,10 @@ public class UserCreationServiceImpl implements UserCreationService {
                 .over18(true)
                 .claimed(true)
                 .verified(true)
+                .emailVerified(true)
                 .totalUploadUsage(0L)
                 .displayColor(Utils.generateRandomHexColor())
-                .role(Role.MODERATOR)
+                .role(Role.USER)
                 .build();
         alice = userRepository.save(alice);
 

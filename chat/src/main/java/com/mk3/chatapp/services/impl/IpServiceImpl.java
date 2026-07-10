@@ -25,10 +25,11 @@ public class IpServiceImpl implements IpService {
 
     @Override
     public RequiredVerificationEnum getRequiredVerification(String targetIp) {
-        // VERIFICATION BYPASS: comment out the line below to re-enable the extra
-        // email/phone verification steps for flagged IPs (REST filter, WebSocket
-        // interceptor, rate limits and registration phone requirement).
-        // if (true) return RequiredVerificationEnum.NONE;
+        // VERIFICATION BYPASS (currently ACTIVE): comment out the line below to
+        // re-enable the extra email/phone verification steps for flagged IPs
+        // (REST filter, WebSocket interceptor, rate limits and registration
+        // phone requirement).
+//        if (true) return RequiredVerificationEnum.NONE;
 
         var ip = self.getIp(targetIp);
         return Objects.isNull(ip) ? RequiredVerificationEnum.NONE : ip.getRequiredVerification();

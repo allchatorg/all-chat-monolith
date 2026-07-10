@@ -49,15 +49,20 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
             Map.entry("/api/v1/ban-appeals/**", Set.of("GET", "POST"))
     );
     // The only API surface reachable with an active ban: the appeal flow, identity
-    // lookup, the ping bootstrap call and logout. Deliberately excludes /ws/** so
-    // banned users cannot hold a live socket, and everything else keeps returning
-    // the ban-shaped 403. /auth/ping must stay reachable: the frontend blocks all
-    // session hydration on it, so banning it deadlocks the /banned page itself.
+    // lookup, the ping bootstrap call, logout and login. Deliberately excludes
+    // /ws/** so banned users cannot hold a live socket, and everything else keeps
+    // returning the ban-shaped 403. /auth/ping must stay reachable: the frontend
+    // blocks all session hydration on it, so banning it deadlocks the /banned page
+    // itself. /auth/login must stay reachable because banned users may log in (see
+    // AuthenticationServiceImpl.login) and, more importantly, a browser holding a
+    // stale banned session token would otherwise 403 a *different* user's login.
+    // Register endpoints stay excluded on purpose.
     private static final Map<String, Set<String>> BANNED_USER_ALLOWED_ENDPOINTS = Map.of(
             "/api/v1/ban-appeals/**", Set.of("GET", "POST"),
             "/api/v1/users/me", Set.of("GET"),
             "/api/v1/auth/ping", Set.of("GET"),
-            "/api/v1/auth/logout", Set.of("POST")
+            "/api/v1/auth/logout", Set.of("POST"),
+            "/api/v1/auth/login", Set.of("POST")
     );
     private final BanCacheService banCacheService;
     private final ObjectMapper objectMapper;
