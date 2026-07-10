@@ -1,8 +1,9 @@
 spring:
   jpa:
     hibernate:
-      # No Flyway yet — update keeps existing data across restarts/redeploys
-      ddl-auto: update
+      # WARNING: create-drop wipes the database on every restart/redeploy —
+      # switch back to update once the schema reset is done
+      ddl-auto: create-drop
     show-sql: false
     properties:
       hibernate:
