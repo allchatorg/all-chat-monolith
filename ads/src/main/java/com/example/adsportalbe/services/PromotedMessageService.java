@@ -26,8 +26,6 @@ public interface PromotedMessageService {
      */
     PromotedMessageDetailDto requestCancelByUser(Long id, String reason, User user);
 
-    void deleteByUser(Long id, User user);
-
     Page<PromotedMessageDto> searchPromotions(PromotedMessageSearchRequestDto request);
 
     PromotedMessageDetailDto approve(Long id) throws StripeException;

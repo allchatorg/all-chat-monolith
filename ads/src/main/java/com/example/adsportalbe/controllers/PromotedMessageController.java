@@ -78,13 +78,6 @@ public class PromotedMessageController {
         return ResponseEntity.ok(result);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePromotedMessage(@PathVariable Long id) {
-        User user = requireUser();
-        promotedMessageService.deleteByUser(id, user);
-        return ResponseEntity.noContent().build();
-    }
-
     private User requireUser() {
         User user = securityService.getCurrentUser();
         if (user == null) {

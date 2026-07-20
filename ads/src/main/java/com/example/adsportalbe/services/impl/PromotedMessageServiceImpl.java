@@ -213,21 +213,6 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     }
 
     @Override
-    @Transactional
-    public void deleteByUser(Long id, User user) {
-        PromotedMessage promotion = findPromotion(id);
-        if (!promotion.getOwner().getId().equals(user.getId())) {
-            throw new RuntimeException("Access denied: You can only delete your own promoted messages");
-        }
-        if (promotion.getStatus() != PromotedMessageStatus.DENIED
-                && promotion.getStatus() != PromotedMessageStatus.CANCELED) {
-            throw new ConflictException(
-                    "Only DENIED or CANCELED promotions can be deleted. Cancel the promotion first.");
-        }
-        promotedMessageRepository.delete(promotion);
-    }
-
-    @Override
     public Page<PromotedMessageDto> searchPromotions(PromotedMessageSearchRequestDto request) {
         if (request == null) {
             throw new IllegalArgumentException("Search request cannot be null");
