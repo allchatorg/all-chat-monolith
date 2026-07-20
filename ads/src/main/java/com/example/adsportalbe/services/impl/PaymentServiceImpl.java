@@ -1,19 +1,13 @@
 package com.example.adsportalbe.services.impl;
 
 import com.example.adsportalbe.dto.payment.PaymentMethodDto;
-import com.mk3.chatapp.models.identity.User;
 import com.example.adsportalbe.repositories.AdsUserRepository;
 import com.example.adsportalbe.services.PaymentService;
+import com.mk3.chatapp.models.identity.User;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
-import com.stripe.model.Customer;
-import com.stripe.model.PaymentIntent;
-import com.stripe.model.PaymentMethod;
-import com.stripe.model.PaymentMethodCollection;
-import com.stripe.param.CustomerCreateParams;
-import com.stripe.param.PaymentIntentCreateParams;
-import com.stripe.param.PaymentMethodAttachParams;
-import com.stripe.param.PaymentMethodListParams;
+import com.stripe.model.*;
+import com.stripe.param.*;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -197,6 +191,27 @@ public class PaymentServiceImpl implements PaymentService {
         } else {
             throw new IllegalStateException(
                     "Payment intent " + paymentIntentId + " cannot be captured, current status: "
+                            + paymentIntent.getStatus());
+        }
+    }
+
+    @Override
+    public void refundPayment(String paymentIntentId) throws StripeException {
+        if (paymentIntentId == null || paymentIntentId.isEmpty()) {
+            throw new IllegalArgumentException("Payment intent ID cannot be null or empty");
+        }
+
+        PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentIntentId);
+
+        // Only captured payments can be refunded
+        if ("succeeded".equals(paymentIntent.getStatus())) {
+            Refund.create(RefundCreateParams.builder()
+                    .setPaymentIntent(paymentIntentId)
+                    .build());
+            log.info("Refunded payment intent: {}", paymentIntentId);
+        } else {
+            throw new IllegalStateException(
+                    "Payment intent " + paymentIntentId + " cannot be refunded, current status: "
                             + paymentIntent.getStatus());
         }
     }

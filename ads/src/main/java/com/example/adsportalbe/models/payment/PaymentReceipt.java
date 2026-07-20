@@ -1,5 +1,6 @@
 package com.example.adsportalbe.models.payment;
 
+import com.example.adsportalbe.enums.PurchaseType;
 import com.example.adsportalbe.models.ad.Ad;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,7 +34,20 @@ public class PaymentReceipt {
 
     private Instant paidAt;
 
+    // Discriminates ad purchases from promoted-message purchases so revenue
+    // queries can split the two series. Defaults to AD for legacy receipts.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "purchase_type")
+    private PurchaseType purchaseType;
+
     @OneToOne
     @JoinColumn(name = "ad_id")
     private Ad ad;
+
+    @PrePersist
+    private void applyDefaults() {
+        if (purchaseType == null) {
+            purchaseType = PurchaseType.AD;
+        }
+    }
 }

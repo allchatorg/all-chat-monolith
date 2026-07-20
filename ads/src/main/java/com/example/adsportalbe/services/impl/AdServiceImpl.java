@@ -4,9 +4,9 @@ import com.example.adsportalbe.dto.ad.*;
 import com.example.adsportalbe.dto.payment.PaymentMethodDto;
 import com.example.adsportalbe.dto.requests.AdSearchRequestDto;
 import com.example.adsportalbe.enums.AdStatus;
+import com.example.adsportalbe.enums.PurchaseType;
 import com.example.adsportalbe.mappers.AdMapper;
 import com.example.adsportalbe.models.ad.*;
-import com.mk3.chatapp.models.identity.User;
 import com.example.adsportalbe.models.payment.PaymentReceipt;
 import com.example.adsportalbe.repositories.AdFormatRepository;
 import com.example.adsportalbe.repositories.AdRepository;
@@ -17,6 +17,7 @@ import com.example.adsportalbe.services.MailService;
 import com.example.adsportalbe.services.PaymentService;
 import com.example.adsportalbe.specifications.AdSpecification;
 import com.example.adsportalbe.utils.Utils;
+import com.mk3.chatapp.models.identity.User;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +49,35 @@ public class AdServiceImpl implements AdService {
     private final MailService mailService;
     private final AdCacheService adCacheService;
     private final AdMapper adMapper;
+
+    private static double refundableAmount(Ad ad) {
+        if (ad.getReceipt().getAmountPaid() != null) {
+            return ad.getReceipt().getAmountPaid();
+        }
+        return ad.getTotalCost() != null ? ad.getTotalCost() : 0;
+    }
+
+    private static Map<Integer, Double> toMonthRevenueMap(List<Object[]> monthlyData) {
+        return monthlyData.stream()
+                .collect(Collectors.toMap(
+                        row -> ((Number) row[0]).intValue(), // month number
+                        row -> row[1] != null ? ((Number) row[1]).doubleValue() : 0.0 // revenue
+                ));
+    }
+
+    private static Map<LocalDate, Double> toDateRevenueMap(List<Object[]> dailyData) {
+        return dailyData.stream()
+                .collect(Collectors.toMap(
+                        row -> {
+                            if (row[0] instanceof java.sql.Date) {
+                                return ((java.sql.Date) row[0]).toLocalDate();
+                            } else if (row[0] instanceof LocalDate) {
+                                return (LocalDate) row[0];
+                            }
+                            return null;
+                        },
+                        row -> row[1] != null ? ((Number) row[1]).doubleValue() : 0.0));
+    }
 
     @Override
     @Transactional
@@ -128,7 +158,8 @@ public class AdServiceImpl implements AdService {
                 .amountPaid(calculatedPrice)
                 .currency("USD")
                 .status("AUTHORIZED")
-                .provider("STRIPE");
+                .provider("STRIPE")
+                .purchaseType(PurchaseType.AD);
 
         PaymentMethodDto paymentMethodDto = paymentService.getPaymentMethod(request.getStripeId());
         if (paymentMethodDto != null) {
@@ -283,13 +314,6 @@ public class AdServiceImpl implements AdService {
         }
 
         return new PendingAdRefundOutcome(refundableAds.size(), refunded, totalRefunded, currency);
-    }
-
-    private static double refundableAmount(Ad ad) {
-        if (ad.getReceipt().getAmountPaid() != null) {
-            return ad.getReceipt().getAmountPaid();
-        }
-        return ad.getTotalCost() != null ? ad.getTotalCost() : 0;
     }
 
     @Override
@@ -498,15 +522,11 @@ public class AdServiceImpl implements AdService {
     public MonthlyRevenueResponseDto getMonthlyRevenueStats() {
         int currentYear = LocalDate.now().getYear();
 
-        // Fetch monthly revenue from repository
-        List<Object[]> monthlyData = paymentReceiptRepository.findMonthlyRevenue(currentYear);
-
-        // Create a map for easy lookup
-        Map<Integer, Double> revenueByMonth = monthlyData.stream()
-                .collect(Collectors.toMap(
-                        row -> ((Number) row[0]).intValue(), // month number
-                        row -> row[1] != null ? ((Number) row[1]).doubleValue() : 0.0 // revenue
-                ));
+        // Fetch monthly revenue per purchase type from repository
+        Map<Integer, Double> adRevenueByMonth = toMonthRevenueMap(
+                paymentReceiptRepository.findMonthlyRevenueByType(currentYear, PurchaseType.AD));
+        Map<Integer, Double> promotedRevenueByMonth = toMonthRevenueMap(
+                paymentReceiptRepository.findMonthlyRevenueByType(currentYear, PurchaseType.PROMOTED_MESSAGE));
 
         // Month abbreviations
         String[] monthNames = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -517,7 +537,8 @@ public class AdServiceImpl implements AdService {
         for (int i = 1; i <= 12; i++) {
             data.add(MonthlyRevenueDto.builder()
                     .month(monthNames[i - 1])
-                    .revenue(revenueByMonth.getOrDefault(i, 0.0))
+                    .revenue(adRevenueByMonth.getOrDefault(i, 0.0))
+                    .promotedRevenue(promotedRevenueByMonth.getOrDefault(i, 0.0))
                     .build());
         }
 
@@ -536,21 +557,13 @@ public class AdServiceImpl implements AdService {
         Instant startInstant = startDate.atStartOfDay(zoneId).toInstant();
         Instant endInstant = today.plusDays(1).atStartOfDay(zoneId).toInstant();
 
-        // Fetch daily revenue from repository
-        List<Object[]> dailyData = paymentReceiptRepository.findDailyRevenueForDateRange(startInstant, endInstant);
-
-        // Create a map for easy lookup by LocalDate
-        Map<LocalDate, Double> revenueByDate = dailyData.stream()
-                .collect(Collectors.toMap(
-                        row -> {
-                            if (row[0] instanceof java.sql.Date) {
-                                return ((java.sql.Date) row[0]).toLocalDate();
-                            } else if (row[0] instanceof LocalDate) {
-                                return (LocalDate) row[0];
-                            }
-                            return null;
-                        },
-                        row -> row[1] != null ? ((Number) row[1]).doubleValue() : 0.0));
+        // Fetch daily revenue per purchase type from repository
+        Map<LocalDate, Double> adRevenueByDate = toDateRevenueMap(
+                paymentReceiptRepository.findDailyRevenueForDateRangeByType(startInstant, endInstant,
+                        PurchaseType.AD));
+        Map<LocalDate, Double> promotedRevenueByDate = toDateRevenueMap(
+                paymentReceiptRepository.findDailyRevenueForDateRangeByType(startInstant, endInstant,
+                        PurchaseType.PROMOTED_MESSAGE));
 
         // Day abbreviations in order (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
         String[] dayNames = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
@@ -563,7 +576,8 @@ public class AdServiceImpl implements AdService {
 
             data.add(WeeklyRevenueDto.builder()
                     .day(dayNames[dayOfWeek - 1])
-                    .revenue(revenueByDate.getOrDefault(date, 0.0))
+                    .revenue(adRevenueByDate.getOrDefault(date, 0.0))
+                    .promotedRevenue(promotedRevenueByDate.getOrDefault(date, 0.0))
                     .build());
         }
 

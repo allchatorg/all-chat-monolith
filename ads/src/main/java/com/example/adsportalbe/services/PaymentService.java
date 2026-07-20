@@ -23,4 +23,6 @@ public interface PaymentService {
     void cancelPaymentAuthorization(String paymentIntentId) throws StripeException;
 
     void capturePayment(String paymentIntentId) throws StripeException;
+
+    void refundPayment(String paymentIntentId) throws StripeException;
 }

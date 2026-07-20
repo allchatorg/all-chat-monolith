@@ -11,5 +11,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class WeeklyRevenueDto {
     private String day;
-    private Double revenue;
+    private Double revenue; // ad revenue only
+    private Double promotedRevenue;
 }
