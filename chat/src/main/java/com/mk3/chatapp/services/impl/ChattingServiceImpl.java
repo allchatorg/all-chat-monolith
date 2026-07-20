@@ -102,6 +102,7 @@ public class ChattingServiceImpl implements ChattingService {
 
     @Override
     public MessageResponseDTO editMessage(Long messageId, EditMessageRequestDTO editMessageRequestDTO) {
+        assertNoActivePromotion(messageId);
         var user = securityService.getCurrentUser();
         return messageMapper.toMessageResponseDTO(
                 messagesService.editMessage(
@@ -113,6 +114,7 @@ public class ChattingServiceImpl implements ChattingService {
     @Override
     public MessageResponseDTO removeAttachmentFromMessage(Long messageId,
                                                           RemoveMessageAttachmentDTO removeAttachmentRequest) {
+        assertNoActivePromotion(messageId);
         var user = securityService.getCurrentUser();
         var message = messagesService.findById(messageId);
         var attachment = attachmentService.findById(removeAttachmentRequest.attachmentId());
@@ -135,6 +137,17 @@ public class ChattingServiceImpl implements ChattingService {
         var message = messagesService.findById(messageId, requestor.getRole());
 
         validateMessageDeletion(message, requestor);
+
+        // Owners cannot remove a message while its promotion awaits review — they must
+        // request a cancellation in the ads portal first. Staff removals stay exempt
+        // and keep auto-canceling the promotion below.
+        var activePromotion = messagePromotionPort.getActivePromotions(List.of(messageId)).get(messageId);
+        if (activePromotion != null
+                && "PENDING".equals(activePromotion.status())
+                && !deletedByStaff(message, requestor)) {
+            throw new IllegalStateException(
+                    "This message has a promotion awaiting review. Request a promotion cancellation in the ads portal before removing it.");
+        }
 
         // Removing a message cancels its active promotion (pending hold released,
         // approved payment kept). A payment-provider failure aborts the removal so
@@ -192,6 +205,15 @@ public class ChattingServiceImpl implements ChattingService {
 
         var message = messagesService.findById(messageId);
         return messageHistoryTransformer.transform(messageEditHistoryService.findByMessage(message));
+    }
+
+    // Messages with an active (PENDING or APPROVED) promotion are locked against
+    // edits — the promoted content must stay what was reviewed/paid for.
+    private void assertNoActivePromotion(Long messageId) {
+        if (!messagePromotionPort.getActivePromotions(List.of(messageId)).isEmpty()) {
+            throw new IllegalStateException(
+                    "This message has an active promotion and cannot be edited. Cancel the promotion in the ads portal first.");
+        }
     }
 
     private void validateMessageDeletion(Message message, User requestor) {
