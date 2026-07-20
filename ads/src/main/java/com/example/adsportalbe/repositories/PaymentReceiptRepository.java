@@ -12,9 +12,9 @@ import java.util.List;
 @Repository
 public interface PaymentReceiptRepository extends JpaRepository<PaymentReceipt, Long> {
 
-    // Total across purchase types — the daily summary stays a headline number
-    @Query("SELECT SUM(p.amountPaid) FROM PaymentReceipt p WHERE p.paidAt BETWEEN :start AND :end")
-    Double sumAmountPaidByPaidAtBetween(Instant start, Instant end);
+    @Query("SELECT SUM(p.amountPaid) FROM PaymentReceipt p " +
+            "WHERE p.paidAt BETWEEN :start AND :end AND p.purchaseType = :purchaseType")
+    Double sumAmountPaidByPaidAtBetweenAndType(Instant start, Instant end, PurchaseType purchaseType);
 
     @Query("SELECT MONTH(p.paidAt) as month, SUM(p.amountPaid) as revenue " +
             "FROM PaymentReceipt p " +

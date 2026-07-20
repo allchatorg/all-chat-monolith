@@ -509,8 +509,10 @@ public class AdServiceImpl implements AdService {
         Instant yesterdayStart = today.minusDays(1).atStartOfDay(zoneId).toInstant();
         Instant yesterdayEnd = activeTodayStart.minusSeconds(1);
 
-        Double todayRevenue = paymentReceiptRepository.sumAmountPaidByPaidAtBetween(activeTodayStart, activeTodayEnd);
-        Double yesterdayRevenue = paymentReceiptRepository.sumAmountPaidByPaidAtBetween(yesterdayStart, yesterdayEnd);
+        Double todayRevenue = paymentReceiptRepository.sumAmountPaidByPaidAtBetweenAndType(
+                activeTodayStart, activeTodayEnd, PurchaseType.AD);
+        Double yesterdayRevenue = paymentReceiptRepository.sumAmountPaidByPaidAtBetweenAndType(
+                yesterdayStart, yesterdayEnd, PurchaseType.AD);
 
         return RevenueDto.builder()
                 .todayRevenue(todayRevenue != null ? todayRevenue : 0.0)
