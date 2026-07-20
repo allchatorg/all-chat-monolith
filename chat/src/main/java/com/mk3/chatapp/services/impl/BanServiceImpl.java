@@ -224,17 +224,15 @@ public class BanServiceImpl implements BanService {
         messagesService.deleteUserMessagesAfter(user, cutoff);
 
         // Deleted messages must not keep active promotions: pending holds are
-        // released, approved payments are kept. Permanent bans skip this — their
-        // post-commit pass cancels ALL promotions with full refunds, and running
-        // the no-refund cascade first would downgrade the promised refund.
-        if (dto.banType() != BanType.PERMANENT) {
-            try {
-                messagePromotionPort.cancelPromotionsForDeletedUserMessages(user.getId(), cutoff);
-            } catch (Exception e) {
-                // Promotion cleanup must never fail the ban itself.
-                log.error("Failed to cancel promotions for deleted messages of user {}: {}",
-                        user.getId(), e.getMessage());
-            }
+        // released, approved payments are kept. This runs for permanent bans too —
+        // their post-commit pass only releases remaining PENDING holds and never
+        // touches approved promotions.
+        try {
+            messagePromotionPort.cancelPromotionsForDeletedUserMessages(user.getId(), cutoff);
+        } catch (Exception e) {
+            // Promotion cleanup must never fail the ban itself.
+            log.error("Failed to cancel promotions for deleted messages of user {}: {}",
+                    user.getId(), e.getMessage());
         }
     }
 

@@ -394,34 +394,27 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
             throw new IllegalArgumentException("User ID cannot be null");
         }
 
-        List<PromotedMessage> activePromotions =
-                promotedMessageRepository.findByOwner_IdAndStatusIn(userId, ACTIVE_STATUSES);
+        // Only PENDING holds are released on a permanent ban. APPROVED (captured)
+        // promotions are NOT refunded and keep running; they are only stopped —
+        // without a refund — if the ban's message deletion removes their message.
+        List<PromotedMessage> pendingPromotions =
+                promotedMessageRepository.findByOwner_IdAndStatusIn(userId, List.of(PromotedMessageStatus.PENDING));
         int released = 0;
-        int refunded = 0;
         double totalReturned = 0;
         String currency = "USD";
 
-        for (PromotedMessage promotion : activePromotions) {
+        for (PromotedMessage promotion : pendingPromotions) {
             try {
-                boolean wasPending = promotion.getStatus() == PromotedMessageStatus.PENDING;
-                if (wasPending) {
-                    releaseHold(promotion);
-                } else {
-                    refundCapture(promotion);
-                }
+                releaseHold(promotion);
 
                 promotion.setStatus(PromotedMessageStatus.CANCELED);
                 promotion.setCanceledBy(CanceledBy.SYSTEM_BAN);
                 promotion.setResolvedAt(Instant.now());
-                promotion.setReason("Owner permanently banned — promotion canceled and payment returned in full.");
+                promotion.setReason("Owner permanently banned — pending promotion canceled and payment hold released.");
                 promotedMessageRepository.save(promotion);
                 broadcastPromotionUpdate(promotion);
 
-                if (wasPending) {
-                    released++;
-                } else {
-                    refunded++;
-                }
+                released++;
                 totalReturned += promotion.getAmount() != null ? promotion.getAmount() : 0;
                 if (promotion.getCurrency() != null && !promotion.getCurrency().isBlank()) {
                     currency = promotion.getCurrency();
@@ -434,7 +427,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
             }
         }
 
-        return new PromotionCancelOutcome(activePromotions.size(), released, refunded, totalReturned, currency);
+        return new PromotionCancelOutcome(pendingPromotions.size(), released, 0, totalReturned, currency);
     }
 
     @Override
@@ -538,16 +531,6 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         if (receipt != null && receipt.getStripePaymentIntentId() != null) {
             paymentService.cancelPaymentAuthorization(receipt.getStripePaymentIntentId());
             receipt.setStatus("CANCELLED");
-        } else {
-            log.warn("No payment receipt found for promotion {}", promotion.getId());
-        }
-    }
-
-    private void refundCapture(PromotedMessage promotion) throws StripeException {
-        PaymentReceipt receipt = promotion.getReceipt();
-        if (receipt != null && receipt.getStripePaymentIntentId() != null) {
-            paymentService.refundPayment(receipt.getStripePaymentIntentId());
-            receipt.setStatus("REFUNDED");
         } else {
             log.warn("No payment receipt found for promotion {}", promotion.getId());
         }

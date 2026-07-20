@@ -74,9 +74,8 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
             try {
                 var promotionResult = messagePromotionPort.cancelPromotionsForBannedUser(banRequestDTO.userId());
                 if (promotionResult.attempted() > 0) {
-                    log.info("Permanent ban of user {}: canceled {} promoted message(s) ({} released, {} refunded), total {} {}",
-                            banRequestDTO.userId(), promotionResult.released() + promotionResult.refunded(),
-                            promotionResult.released(), promotionResult.refunded(),
+                    log.info("Permanent ban of user {}: released {}/{} pending promotion hold(s), total {} {}",
+                            banRequestDTO.userId(), promotionResult.released(), promotionResult.attempted(),
                             promotionResult.totalReturned(), promotionResult.currency());
                 }
             } catch (Exception e) {
