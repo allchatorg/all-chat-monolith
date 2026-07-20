@@ -16,6 +16,7 @@ import com.mk3.chatapp.repositories.BanRepository;
 import com.mk3.chatapp.services.*;
 import com.mk3.chatapp.services.schedulers.BanSchedulingService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +28,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class BanServiceImpl implements BanService {
@@ -45,6 +47,7 @@ public class BanServiceImpl implements BanService {
     private final BanMapper banMapper;
     private final com.mk3.chatapp.services.AuditLogService auditLogService;
     private final IpService ipService;
+    private final MessagePromotionPort messagePromotionPort;
 
     @Transactional
     @Override
@@ -219,6 +222,20 @@ public class BanServiceImpl implements BanService {
         }
 
         messagesService.deleteUserMessagesAfter(user, cutoff);
+
+        // Deleted messages must not keep active promotions: pending holds are
+        // released, approved payments are kept. Permanent bans skip this — their
+        // post-commit pass cancels ALL promotions with full refunds, and running
+        // the no-refund cascade first would downgrade the promised refund.
+        if (dto.banType() != BanType.PERMANENT) {
+            try {
+                messagePromotionPort.cancelPromotionsForDeletedUserMessages(user.getId(), cutoff);
+            } catch (Exception e) {
+                // Promotion cleanup must never fail the ban itself.
+                log.error("Failed to cancel promotions for deleted messages of user {}: {}",
+                        user.getId(), e.getMessage());
+            }
+        }
     }
 
     private void notifyUserViaWebSocket(BanRequestDTO dto, User user, Ban ban, String description) {

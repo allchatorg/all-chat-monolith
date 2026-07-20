@@ -17,6 +17,7 @@ import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.services.*;
 import com.mk3.chatapp.services.csam.CsamAnalysisPublisher;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ import java.security.Principal;
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChattingServiceImpl implements ChattingService {
@@ -43,6 +45,7 @@ public class ChattingServiceImpl implements ChattingService {
     private final MessageHistoryTransformer messageHistoryTransformer;
     private final CsamAnalysisPublisher csamAnalysisPublisher;
     private final PrivateChatService privateChatService;
+    private final MessagePromotionPort messagePromotionPort;
 
     @Transactional
     public AttachmentDTO uploadAttachment(MultipartFile file) {
@@ -133,6 +136,16 @@ public class ChattingServiceImpl implements ChattingService {
 
         validateMessageDeletion(message, requestor);
 
+        // Removing a message cancels its active promotion (pending hold released,
+        // approved payment kept). A payment-provider failure aborts the removal so
+        // no active promotion is left pointing at a deleted message.
+        try {
+            messagePromotionPort.cancelActivePromotionForMessage(messageId, deletedByStaff(message, requestor));
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Failed to cancel the promotion on this message — the message was not removed.", e);
+        }
+
         boolean alreadyDeleted = message.getDeleted();
         var deletedMessage = deleteAndBroadcastMessage(message);
 
@@ -151,6 +164,12 @@ public class ChattingServiceImpl implements ChattingService {
     @Transactional
     public Optional<MessageDeleteAuditLog> deleteMessageAsSystem(Long messageId, String description) {
         var message = messagesService.findById(messageId);
+        // System deletion must never fail on a payment error — log and continue.
+        try {
+            messagePromotionPort.cancelActivePromotionForMessage(messageId, true);
+        } catch (Exception e) {
+            log.error("Failed to cancel promotion for system-deleted message {}: {}", messageId, e.getMessage());
+        }
         boolean alreadyDeleted = message.getDeleted();
         var deletedMessage = deleteAndBroadcastMessage(message);
         if (alreadyDeleted) {

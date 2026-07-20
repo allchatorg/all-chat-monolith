@@ -14,7 +14,7 @@ class MessageMapperReplyTest {
 
     private static final MessageResponseDTO BASE_DTO = new MessageResponseDTO(
             1L, "a reply", 5L, "room", 2L, "replier", null, null,
-            false, false, null, null, null, List.of(), List.of(), null);
+            false, false, null, null, null, List.of(), List.of(), null, null);
 
     // The generated mapping is exercised by the application context; here we test
     // the reply-visibility contract implemented in the interface default methods.

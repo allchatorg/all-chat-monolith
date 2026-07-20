@@ -21,11 +21,18 @@ public record MessageResponseDTO(
         String color,
         List<AttachmentDTO> attachments,
         List<ReactionSummaryDTO> reactions,
-        ReplyInfoDTO replyTo
+        ReplyInfoDTO replyTo,
+        PromotionInfoDTO promotion
 ) {
     public MessageResponseDTO withReplyTo(ReplyInfoDTO replyTo) {
         return new MessageResponseDTO(id, content, chatRoomId, chatRoomName, senderId, senderUsername,
                 senderRole, senderCountryCode, bannedUser, deleted, createdAt, editedAt, color,
-                attachments, reactions, replyTo);
+                attachments, reactions, replyTo, promotion);
+    }
+
+    public MessageResponseDTO withPromotion(PromotionInfoDTO promotion) {
+        return new MessageResponseDTO(id, content, chatRoomId, chatRoomName, senderId, senderUsername,
+                senderRole, senderCountryCode, bannedUser, deleted, createdAt, editedAt, color,
+                attachments, reactions, replyTo, promotion);
     }
 }

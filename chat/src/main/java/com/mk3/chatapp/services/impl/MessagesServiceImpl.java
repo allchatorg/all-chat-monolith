@@ -11,11 +11,7 @@ import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.enums.WebSocketMessageType;
 import com.mk3.chatapp.mappers.MessageEditHistoryMapper;
 import com.mk3.chatapp.mappers.MessageMapper;
-import com.mk3.chatapp.models.Attachment;
-import com.mk3.chatapp.models.ChatRoom;
-import com.mk3.chatapp.models.Message;
-import com.mk3.chatapp.models.UserChatRoom;
-import com.mk3.chatapp.models.WebSocketMessage;
+import com.mk3.chatapp.models.*;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.repositories.MessageRepository;
 import com.mk3.chatapp.repositories.UserChatRoomRepository;
@@ -50,6 +46,7 @@ public class MessagesServiceImpl implements MessagesService {
     private final AttachmentService attachmentService;
     private final ChatRoomService chatRoomService;
     private final UserChatRoomRepository userChatRoomRepository;
+    private final MessagePromotionEnrichmentService messagePromotionEnrichmentService;
 
     /**
      * Validates message content when saving a new message.
@@ -119,7 +116,8 @@ public class MessagesServiceImpl implements MessagesService {
                 messageResponseDTO.color(),
                 filteredAttachments,
                 messageResponseDTO.reactions(),
-                messageResponseDTO.replyTo());
+                messageResponseDTO.replyTo(),
+                messageResponseDTO.promotion());
     }
 
     @Override
@@ -207,6 +205,8 @@ public class MessagesServiceImpl implements MessagesService {
             messageResponseDTOS.removeFirst();
         }
 
+        messageResponseDTOS = messagePromotionEnrichmentService.enrich(messageResponseDTOS);
+
         boolean hasNext = checkIfHasNext(chatRoomId, messageId, isStaff);
 
         return new MessagePageDTO(
@@ -230,6 +230,8 @@ public class MessagesServiceImpl implements MessagesService {
         if (hasNext) {
             messageResponseDTOS.removeLast();
         }
+
+        messageResponseDTOS = messagePromotionEnrichmentService.enrich(messageResponseDTOS);
 
         boolean hasPrevious = checkIfHasPrevious(chatRoomId, messageId, isStaff);
 
@@ -261,10 +263,11 @@ public class MessagesServiceImpl implements MessagesService {
 
         allMessages.addAll(after);
 
-        List<MessageResponseDTO> messageResponseDTOS = allMessages.stream()
-                .map(message -> messageMapper.toMessageResponseDTO(message, isStaff))
-                .limit(limit)
-                .toList();
+        List<MessageResponseDTO> messageResponseDTOS = messagePromotionEnrichmentService.enrich(
+                allMessages.stream()
+                        .map(message -> messageMapper.toMessageResponseDTO(message, isStaff))
+                        .limit(limit)
+                        .toList());
 
         if (messageResponseDTOS.isEmpty()) {
             return new MessagePageDTO(List.of(), false, false, null, null);
@@ -283,12 +286,13 @@ public class MessagesServiceImpl implements MessagesService {
 
     private MessagePageDTO getLatestMessages(Long chatRoomId, int limit, boolean isStaff) {
         Pageable pageable = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "id"));
-        List<MessageResponseDTO> messageResponseDTOS = messageRepository
-                .findVisibleByChatRoomId(chatRoomId, isStaff, pageable)
-                .stream()
-                .map(message -> messageMapper.toMessageResponseDTO(message, isStaff))
-                .toList()
-                .reversed();
+        List<MessageResponseDTO> messageResponseDTOS = messagePromotionEnrichmentService.enrich(
+                messageRepository
+                        .findVisibleByChatRoomId(chatRoomId, isStaff, pageable)
+                        .stream()
+                        .map(message -> messageMapper.toMessageResponseDTO(message, isStaff))
+                        .toList()
+                        .reversed());
 
         if (messageResponseDTOS.isEmpty()) {
             return new MessagePageDTO(List.of(), false, false, null, null);
@@ -344,7 +348,8 @@ public class MessagesServiceImpl implements MessagesService {
                         role.isStaffMember()),
                 pageable);
 
-        return messagesPage.map(message -> messageMapper.toMessageResponseDTO(message, role.isStaffMember()));
+        return messagePromotionEnrichmentService.enrich(
+                messagesPage.map(message -> messageMapper.toMessageResponseDTO(message, role.isStaffMember())));
     }
 
     @Override
@@ -555,6 +560,7 @@ public class MessagesServiceImpl implements MessagesService {
 
     @Override
     public MessageResponseDTO broadcastMessageEdit(MessageResponseDTO messageResponseDTO) {
+        messageResponseDTO = messagePromotionEnrichmentService.enrich(messageResponseDTO);
         ChatRoom chatRoom = chatRoomService.findById(messageResponseDTO.chatRoomId());
 
         if (chatRoom.getType() == ChatRoomType.PRIVATE) {

@@ -62,6 +62,7 @@ public class MessageHistoryTransformerImpl implements MessageHistoryTransformer 
                 color,
                 attachments,
                 List.of(),
+                null,
                 null
         );
     }

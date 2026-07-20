@@ -33,6 +33,7 @@ public class WebSocketMessage {
             @JsonSubTypes.Type(value = MessageResponseDTO.class, name = "PRIVATE_NEW_MESSAGE"),
             @JsonSubTypes.Type(value = MessageResponseDTO.class, name = "PRIVATE_MESSAGE_EDIT"),
             @JsonSubTypes.Type(value = MessageResponseDTO.class, name = "PRIVATE_MESSAGE_DELETE"),
+            @JsonSubTypes.Type(value = PromotedMessageEventDTO.class, name = "PROMOTED_MESSAGE_UPDATE"),
     })
     private Object data;
 }

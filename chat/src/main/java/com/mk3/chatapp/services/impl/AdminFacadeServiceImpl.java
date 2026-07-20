@@ -34,6 +34,7 @@ import java.util.List;
 public class AdminFacadeServiceImpl implements AdminFacadeService {
     private final BanService banService;
     private final AdsModerationPort adsModerationPort;
+    private final MessagePromotionPort messagePromotionPort;
     private final UserService userService;
     private final SecurityService securityService;
     private final MessagesService messagesService;
@@ -66,6 +67,20 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
                 }
             } catch (Exception e) {
                 log.error("Failed to refund pending ad purchases for banned user {}",
+                        banRequestDTO.userId(), e);
+            }
+
+            // Own try/catch — the ban must never fail on a payment-provider error.
+            try {
+                var promotionResult = messagePromotionPort.cancelPromotionsForBannedUser(banRequestDTO.userId());
+                if (promotionResult.attempted() > 0) {
+                    log.info("Permanent ban of user {}: canceled {} promoted message(s) ({} released, {} refunded), total {} {}",
+                            banRequestDTO.userId(), promotionResult.released() + promotionResult.refunded(),
+                            promotionResult.released(), promotionResult.refunded(),
+                            promotionResult.totalReturned(), promotionResult.currency());
+                }
+            } catch (Exception e) {
+                log.error("Failed to cancel promoted messages for banned user {}",
                         banRequestDTO.userId(), e);
             }
         }

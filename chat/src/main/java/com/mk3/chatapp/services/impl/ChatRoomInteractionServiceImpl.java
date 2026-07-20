@@ -40,6 +40,8 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
     private final SecurityService securityService;
     private final ReactionService reactionService;
     private final PrivateChatService privateChatService;
+    private final MessagePromotionPort messagePromotionPort;
+    private final MessagePromotionEnrichmentService messagePromotionEnrichmentService;
 
     @Override
     @Transactional
@@ -381,8 +383,31 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
             }
         }).filter(Objects::nonNull).toList();
 
+        messages = messagePromotionEnrichmentService.enrich(messages);
+
         return new org.springframework.data.domain.PageImpl<>(messages, messagePage.getPageable(),
                 messagePage.getTotalElements());
+    }
+
+    @Override
+    public Page<MessageResponseDTO> getPromotedMessages(Long roomId, int page, int pageSize, Principal principal) {
+        var user = userService.getPrincipal(principal);
+        var idPage = messagePromotionPort.getApprovedPromotedMessageIds(roomId, page, pageSize);
+
+        // Load one by one in the port's approvedAt-desc order (mirrors top-reacted)
+        var messages = idPage.getContent().stream().map(messageId -> {
+            try {
+                var message = messagesService.findById(messageId, user.getRole());
+                return messageMapper.toMessageResponseDTO(message);
+            } catch (Exception e) {
+                return null;
+            }
+        }).filter(Objects::nonNull).toList();
+
+        messages = messagePromotionEnrichmentService.enrich(messages);
+
+        return new org.springframework.data.domain.PageImpl<>(messages, idPage.getPageable(),
+                idPage.getTotalElements());
     }
 
     private Integer getMissedMessagesCount(Long chatRoomId, Long userId) {

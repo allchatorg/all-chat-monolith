@@ -60,4 +60,6 @@ public interface ChatRoomInteractionService {
                                                    ChatRoomNoiseLevelEnum chatRoomNoiseLevel);
 
     Page<MessageResponseDTO> getTopReactedMessages(Long roomId, int page, int pageSize, Principal principal);
+
+    Page<MessageResponseDTO> getPromotedMessages(Long roomId, int page, int pageSize, Principal principal);
 }

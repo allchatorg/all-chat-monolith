@@ -21,6 +21,7 @@ public interface MessageMapper {
     @Mapping(target = "color", source = "message.sender.displayColor")
     @Mapping(target = "senderCountryCode", source = "message.sender.countryCode")
     @Mapping(target = "replyTo", expression = "java(toReplyInfoDTO(message.getReplyTo(), false))")
+    @Mapping(target = "promotion", ignore = true)
     MessageResponseDTO toMessageResponseDTO(Message message);
 
     default MessageResponseDTO toMessageResponseDTO(Message message, boolean isStaff) {

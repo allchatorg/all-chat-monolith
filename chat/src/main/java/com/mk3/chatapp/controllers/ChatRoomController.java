@@ -89,6 +89,15 @@ public class ChatRoomController {
                 .ok(chatRoomInteractionService.getTopReactedMessages(roomId, page, pageSize, connectedUser));
     }
 
+    @GetMapping("/{roomId}/messages/promoted")
+    public ResponseEntity<Page<MessageResponseDTO>> getPromotedMessages(@PathVariable Long roomId,
+                                                                        @RequestParam(defaultValue = "0") int page,
+                                                                        @RequestParam(defaultValue = "10") int pageSize,
+                                                                        Principal connectedUser) {
+        return ResponseEntity
+                .ok(chatRoomInteractionService.getPromotedMessages(roomId, page, pageSize, connectedUser));
+    }
+
     @GetMapping("/messages/{messageId}/reactions/{emoji}")
     public ResponseEntity<ReactionDetailsDTO> getReactionsByEmoji(
             @PathVariable Long messageId,
