@@ -14,8 +14,10 @@ import com.example.adsportalbe.services.PaymentService;
 import com.example.adsportalbe.services.PromotedMessageService;
 import com.example.adsportalbe.specifications.PromotedMessageSpecification;
 import com.example.adsportalbe.utils.Utils;
+import com.mk3.chatapp.dtos.AttachmentDTO;
 import com.mk3.chatapp.dtos.responses.PromotedMessageEventDTO;
 import com.mk3.chatapp.enums.ChatRoomType;
+import com.mk3.chatapp.mappers.AttachmentMapper;
 import com.mk3.chatapp.enums.WebSocketMessageType;
 import com.mk3.chatapp.models.Message;
 import com.mk3.chatapp.models.WebSocketMessage;
@@ -57,6 +59,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     private final MessageRepository messageRepository;
     private final PaymentService paymentService;
     private final WebSocketBroadcastService webSocketBroadcastService;
+    private final AttachmentMapper attachmentMapper;
 
     private static void requireStatus(PromotedMessage promotion, PromotedMessageStatus expected, String action) {
         if (promotion.getStatus() != expected) {
@@ -594,6 +597,8 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     private PromotedMessageDetailDto toDetailDto(PromotedMessage promotion) {
         PaymentReceipt receipt = promotion.getReceipt();
         Message message = promotion.getMessage();
+        List<AttachmentDTO> attachments = message.getAttachments() == null ? List.of()
+                : message.getAttachments().stream().map(attachmentMapper::toDto).toList();
         return new PromotedMessageDetailDto(
                 promotion.getId(),
                 message.getId(),
@@ -601,6 +606,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
                 message.getSender().getApplicationUsername(),
                 message.getCreatedAt(),
                 Boolean.TRUE.equals(message.getDeleted()),
+                attachments,
                 promotion.getChatRoomId(),
                 promotion.getChatRoomName(),
                 promotion.getStatus(),

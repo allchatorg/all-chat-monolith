@@ -2,8 +2,10 @@ package com.example.adsportalbe.dto.promotion;
 
 import com.example.adsportalbe.enums.CanceledBy;
 import com.example.adsportalbe.enums.PromotedMessageStatus;
+import com.mk3.chatapp.dtos.AttachmentDTO;
 
 import java.time.Instant;
+import java.util.List;
 
 public record PromotedMessageDetailDto(
         Long id,
@@ -12,6 +14,7 @@ public record PromotedMessageDetailDto(
         String messageSenderUsername,
         Instant messageCreatedAt,
         boolean messageDeleted,
+        List<AttachmentDTO> messageAttachments,
         Long chatRoomId,
         String chatRoomName,
         PromotedMessageStatus status,

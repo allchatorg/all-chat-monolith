@@ -3,6 +3,7 @@ package com.mk3.chatapp.models;
 import com.mk3.chatapp.models.identity.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ public class Message extends Base {
     private User sender;
 
     @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @SQLRestriction("deleted = false")
     @ToString.Exclude
     private List<Attachment> attachments = new ArrayList<>();
 
