@@ -6,6 +6,7 @@ import com.mk3.chatapp.models.Ip;
 import com.mk3.chatapp.repositories.IpRepository;
 import com.mk3.chatapp.services.IpService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -23,13 +24,17 @@ public class IpServiceImpl implements IpService {
     private final IpServiceImpl self;
     private final IpRepository ipRepository;
 
+    // Disables the extra email/phone verification tiers for flagged IPs
+    // (REST filter, WebSocket interceptor, rate limits and registration
+    // phone requirement). Off by default in the dev profile.
+    @Value("${app.verification.tiers.enabled:true}")
+    private boolean verificationTiersEnabled;
+
     @Override
     public RequiredVerificationEnum getRequiredVerification(String targetIp) {
-        // VERIFICATION BYPASS (currently ACTIVE): comment out the line below to
-        // re-enable the extra email/phone verification steps for flagged IPs
-        // (REST filter, WebSocket interceptor, rate limits and registration
-        // phone requirement).
-//        if (true) return RequiredVerificationEnum.NONE;
+        if (!verificationTiersEnabled) {
+            return RequiredVerificationEnum.NONE;
+        }
 
         var ip = self.getIp(targetIp);
         return Objects.isNull(ip) ? RequiredVerificationEnum.NONE : ip.getRequiredVerification();
