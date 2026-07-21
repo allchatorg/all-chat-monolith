@@ -46,6 +46,17 @@ public class AdsServiceImpl implements AdsService {
         }
     }
 
+    @Override
+    public void registerClick(Long adId, Principal user, String ipAddress) {
+        // Fire-and-forget: a stats failure must never surface to the chat user.
+        try {
+            Long userId = userService.getPrincipal(user).getId();
+            adServingPort.registerClick(adId, userId, ipAddress);
+        } catch (Exception e) {
+            log.error("Failed to register click for ad {}", adId, e);
+        }
+    }
+
     private AdvertResponseDTO convertToAdvertResponse(ServedAdDto servedAdDto) {
         Random random = new Random();
 

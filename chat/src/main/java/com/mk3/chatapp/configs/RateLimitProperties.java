@@ -35,6 +35,7 @@ public class RateLimitProperties {
         private long phoneVerificationPerIpNormalPerHour = 10;
         private long phoneVerificationPerIpFlaggedPerHour = 5;
         private long adsServePerHour = 20;
+        private long adsClickPerHour = 60;
         private long roomMessagesPerMinute = 240;
         private long topReactedMessagesPerMinute = 120;
         private long roomHeartbeatPerMinute = 120;

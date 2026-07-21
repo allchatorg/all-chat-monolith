@@ -29,4 +29,8 @@ public class AdDailyStatistics {
 
     @Column(nullable = false)
     private Long viewsCount;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Long clicksCount = 0L;
 }

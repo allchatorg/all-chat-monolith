@@ -6,4 +6,6 @@ import java.security.Principal;
 
 public interface AdsService {
     AdvertResponseDTO serveAd(Principal userId, String ipAddress);
+
+    void registerClick(Long adId, Principal user, String ipAddress);
 }

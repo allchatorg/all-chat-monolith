@@ -14,4 +14,7 @@ public class UserAdViewsSummaryDto {
     private Long yesterdaysViews;
     private Integer totalViewsBought;
     private Integer totalServedViews;
+    private Long totalClicks;
+    // Fraction (0.0-1.0), computed at read time as totalClicks / totalServedViews
+    private Double overallCtr;
 }

@@ -6,6 +6,7 @@ import com.mk3.chatapp.utils.IpAddressUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,5 +30,12 @@ public class AdsController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(advertResponseDTO);
+    }
+
+    @PostMapping("/{adId}/click")
+    public ResponseEntity<Void> registerClick(@PathVariable Long adId, Principal user, HttpServletRequest request) {
+        String ip = IpAddressUtils.getClientIpAddress(request);
+        adsService.registerClick(adId, user, ip);
+        return ResponseEntity.noContent().build();
     }
 }

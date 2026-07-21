@@ -131,6 +131,7 @@ rate-limit:
     phone-verification-per-ip-normal-per-hour: 10
     phone-verification-per-ip-flagged-per-hour: 5
     ads-serve-per-hour: 200
+    ads-click-per-hour: 60
     room-messages-per-minute: 240
     top-reacted-messages-per-minute: 120
     room-heartbeat-per-minute: 120

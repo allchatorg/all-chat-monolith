@@ -8,10 +8,13 @@ import com.example.adsportalbe.dto.ad.UserAdViewsDailyBreakdownDto;
 import com.example.adsportalbe.dto.ad.UserAdViewsSummaryDto;
 import com.example.adsportalbe.enums.AdStatus;
 import com.example.adsportalbe.models.ad.Ad;
+import com.example.adsportalbe.models.ad.AdClick;
 import com.example.adsportalbe.models.ad.AdDailyStatistics;
+import com.example.adsportalbe.models.ad.AdFormatType;
 import com.example.adsportalbe.models.ad.AdImpression;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.services.FileUploadService;
+import com.example.adsportalbe.repositories.AdClickRepository;
 import com.example.adsportalbe.repositories.AdDailyStatisticsRepository;
 import com.example.adsportalbe.repositories.AdImpressionRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +37,7 @@ public class AdStatisticsService {
 
     private final AdService adService;
     private final AdImpressionRepository adImpressionRepository;
+    private final AdClickRepository adClickRepository;
     private final AdDailyStatisticsRepository adDailyStatisticsRepository;
     private final AdCacheService adCacheService;
     private final AdImpressionCacheService adImpressionCacheService;
@@ -309,6 +313,53 @@ public class AdStatisticsService {
                 .build();
     }
 
+    /**
+     * Records a click-through on a photo/video ad (the user opened the ad's media
+     * overlay in chat). Deduplicated per user per ad per UTC day; repeat clicks
+     * the same day are silent no-ops. Clicks are written directly (no cache
+     * buffer) — they are far rarer than impressions and should show up in the
+     * advertiser dashboard immediately.
+     */
+    @Transactional
+    public void registerClick(Long adId, Long userId, String ipAddress) {
+        List<Ad> ads = adService.findAllById(List.of(adId));
+        if (ads.isEmpty()) {
+            log.warn("Click ignored: ad not found with ID: {}", adId);
+            return;
+        }
+        Ad ad = ads.get(0);
+
+        if (ad.getFormat() != null && ad.getFormat().getType() == AdFormatType.TEXT) {
+            log.debug("Click ignored: ad {} is a TEXT ad", adId);
+            return;
+        }
+
+        LocalDate today = LocalDate.now(UTC);
+        if (adClickRepository.existsByAd_IdAndUserIdAndClickDate(adId, userId, today)) {
+            log.debug("Click ignored: user {} already clicked ad {} today", userId, adId);
+            return;
+        }
+
+        adClickRepository.save(AdClick.builder()
+                .ad(ad)
+                .timestamp(Instant.now())
+                .clickDate(today)
+                .ipAddress(ipAddress)
+                .userId(userId)
+                .build());
+
+        AdDailyStatistics stats = adDailyStatisticsRepository.findByAdIdAndDate(adId, today)
+                .orElseGet(() -> AdDailyStatistics.builder()
+                        .ad(ad)
+                        .date(today)
+                        .viewsCount(0L)
+                        .build());
+        stats.setClicksCount(Optional.ofNullable(stats.getClicksCount()).orElse(0L) + 1);
+        adDailyStatisticsRepository.save(stats);
+
+        log.debug("Registered click for ad {} by user {}", adId, userId);
+    }
+
     private void completeAd(Long adId) {
         // Remove from cache to stop serving
         adCacheService.removeAd(adId);
@@ -382,12 +433,26 @@ public class AdStatisticsService {
                 .findFirst()
                 .orElse(0L);
 
+        Long todaysClicks = dailyStatistics.stream()
+                .filter(stat -> stat.getDate().equals(today))
+                .map(stat -> Optional.ofNullable(stat.getClicksCount()).orElse(0L))
+                .findFirst()
+                .orElse(0L);
+
+        // Lifetime click count, independent of fromDate (like servedViews)
+        long totalClicks = adClickRepository.countByAd_Id(adId);
+
         // Map to DTOs
         List<AdDailyStatsResponseDto.DailyStatDto> dailyStatDtos = dailyStatistics.stream()
-                .map(stat -> AdDailyStatsResponseDto.DailyStatDto.builder()
-                        .date(stat.getDate())
-                        .viewsCount(stat.getViewsCount())
-                        .build())
+                .map(stat -> {
+                    long clicks = Optional.ofNullable(stat.getClicksCount()).orElse(0L);
+                    return AdDailyStatsResponseDto.DailyStatDto.builder()
+                            .date(stat.getDate())
+                            .viewsCount(stat.getViewsCount())
+                            .clicksCount(clicks)
+                            .ctr(computeCtr(clicks, stat.getViewsCount()))
+                            .build();
+                })
                 .toList();
 
         return AdDailyStatsResponseDto.builder()
@@ -396,8 +461,15 @@ public class AdStatisticsService {
                 .servedViews(ad.getServedViews())
                 .todaysViews(todaysViews)
                 .yesterdaysViews(yesterdaysViews)
+                .totalClicks(totalClicks)
+                .todaysClicks(todaysClicks)
+                .overallCtr(computeCtr(totalClicks, ad.getServedViews() != null ? ad.getServedViews().longValue() : 0L))
                 .dailyStats(dailyStatDtos)
                 .build();
+    }
+
+    private Double computeCtr(long clicks, Long views) {
+        return views != null && views > 0 ? clicks / (double) views : 0.0;
     }
 
     /**
@@ -441,11 +513,15 @@ public class AdStatisticsService {
                 .mapToInt(Integer::intValue)
                 .sum();
 
+        long totalClicks = adClickRepository.countByOwnerId(user.getId());
+
         return UserAdViewsSummaryDto.builder()
                 .todaysViews(todaysViews)
                 .yesterdaysViews(yesterdaysViews)
                 .totalViewsBought(totalViewsBought)
                 .totalServedViews(totalServedViews)
+                .totalClicks(totalClicks)
+                .overallCtr(computeCtr(totalClicks, totalServedViews.longValue()))
                 .build();
     }
 

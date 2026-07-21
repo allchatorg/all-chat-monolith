@@ -19,4 +19,11 @@ public interface AdServingPort {
      * @return the ad to serve, or {@code null} when there is no ad to serve.
      */
     ServedAdDto serveAd(Long userId, String ipAddress);
+
+    /**
+     * Records a click-through on a served photo/video ad (the user opened the
+     * ad's media overlay). Deduplicated per user per ad per day on the ads side;
+     * duplicate clicks are silent no-ops.
+     */
+    void registerClick(Long adId, Long userId, String ipAddress);
 }
