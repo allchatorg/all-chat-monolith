@@ -12,7 +12,7 @@ public interface AdsModerationPort {
 
     /**
      * Cancels the payment authorization for every pending ad purchase (a
-     * SUBMITTED ad whose payment is authorized but not yet captured) owned by
+     * PENDING ad whose payment is authorized but not yet captured) owned by
      * the given user, releasing the full amount back to them.
      *
      * <p>Per-ad failures are caught and logged by the implementation so one

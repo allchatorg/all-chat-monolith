@@ -46,7 +46,7 @@ class AdServiceImplRefundTest {
         Ad ad = Ad.builder()
                 .id(id)
                 .title("Ad " + id)
-                .status(AdStatus.SUBMITTED)
+                .status(AdStatus.PENDING)
                 .totalCost(amount)
                 .build();
         PaymentReceipt receipt = PaymentReceipt.builder()
@@ -96,7 +96,7 @@ class AdServiceImplRefundTest {
         assertThat(outcome.attempted()).isEqualTo(2);
         assertThat(outcome.refunded()).isEqualTo(1);
         assertThat(outcome.totalRefunded()).isEqualTo(25.0);
-        assertThat(failing.getStatus()).isEqualTo(AdStatus.SUBMITTED);
+        assertThat(failing.getStatus()).isEqualTo(AdStatus.PENDING);
         assertThat(failing.getReceipt().getStatus()).isEqualTo("AUTHORIZED");
         verify(adRepository, never()).save(failing);
         assertThat(succeeding.getStatus()).isEqualTo(AdStatus.REJECTED);

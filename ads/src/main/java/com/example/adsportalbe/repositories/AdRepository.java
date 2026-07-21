@@ -23,7 +23,7 @@ public interface AdRepository extends JpaRepository<Ad, Long>, JpaSpecificationE
 
     List<Ad> findAllByOwnerId(Long ownerId);
 
-    @Query("SELECT a FROM Ad a WHERE a.owner.id = :userId AND a.status = com.example.adsportalbe.enums.AdStatus.SUBMITTED AND a.receipt.status = 'AUTHORIZED'")
+    @Query("SELECT a FROM Ad a WHERE a.owner.id = :userId AND a.status = com.example.adsportalbe.enums.AdStatus.PENDING AND a.receipt.status = 'AUTHORIZED'")
     List<Ad> findPendingRefundableAdsByOwnerId(@Param("userId") Long userId);
 
     @Query("SELECT a FROM Ad a WHERE a.approvedAt IS NOT NULL AND a.approvedAt >= :fromDate AND a.approvedAt <= :toDate ORDER BY a.approvedAt ASC")

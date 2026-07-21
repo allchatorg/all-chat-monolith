@@ -22,7 +22,7 @@ public interface AdService {
     BanAdsSummaryDto getBanAdsSummary(Long userId);
 
     /**
-     * Cancels the payment authorization for every pending (SUBMITTED +
+     * Cancels the payment authorization for every pending (PENDING +
      * AUTHORIZED) ad of the user, marking each ad REJECTED and its receipt
      * CANCELLED. Per-ad failures are logged and skipped, never thrown.
      */

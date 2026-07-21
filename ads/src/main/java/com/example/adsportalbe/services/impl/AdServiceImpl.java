@@ -136,7 +136,7 @@ public class AdServiceImpl implements AdService {
                 .totalViewsBought(request.getViewsBought())
                 .servedViews(0)
                 .totalCost(calculatedPrice)
-                .status(AdStatus.SUBMITTED)
+                .status(AdStatus.PENDING)
                 .submittedAt(Instant.now())
                 .build();
 
@@ -270,7 +270,7 @@ public class AdServiceImpl implements AdService {
 
         return new BanAdsSummaryDto(
                 totalAds,
-                counts.getOrDefault(AdStatus.SUBMITTED, 0L),
+                counts.getOrDefault(AdStatus.PENDING, 0L),
                 counts.getOrDefault(AdStatus.ACTIVE, 0L),
                 counts.getOrDefault(AdStatus.COMPLETED, 0L),
                 counts.getOrDefault(AdStatus.REJECTED, 0L),
@@ -339,10 +339,10 @@ public class AdServiceImpl implements AdService {
         Ad ad = adRepository.findById(adId)
                 .orElseThrow(() -> new RuntimeException("Ad not found with id: " + adId));
 
-        // 2. Validate ad is in SUBMITTED status
-        if (ad.getStatus() != AdStatus.SUBMITTED) {
+        // 2. Validate ad is in PENDING status
+        if (ad.getStatus() != AdStatus.PENDING) {
             throw new IllegalStateException(
-                    "Only ads with SUBMITTED status can be rejected. Current status: " + ad.getStatus());
+                    "Only ads with PENDING status can be rejected. Current status: " + ad.getStatus());
         }
 
         // 3. Update ad status to REJECTED
@@ -389,10 +389,10 @@ public class AdServiceImpl implements AdService {
         Ad ad = adRepository.findById(adId)
                 .orElseThrow(() -> new RuntimeException("Ad not found with id: " + adId));
 
-        // 2. Validate ad is in SUBMITTED status
-        if (ad.getStatus() != AdStatus.SUBMITTED) {
+        // 2. Validate ad is in PENDING status
+        if (ad.getStatus() != AdStatus.PENDING) {
             throw new IllegalStateException(
-                    "Only ads with SUBMITTED status can be approved. Current status: " + ad.getStatus());
+                    "Only ads with PENDING status can be approved. Current status: " + ad.getStatus());
         }
 
         // 3. Capture payment

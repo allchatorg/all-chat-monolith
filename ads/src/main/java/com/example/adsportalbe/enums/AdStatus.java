@@ -1,7 +1,7 @@
 package com.example.adsportalbe.enums;
 
 public enum AdStatus {
-    SUBMITTED,
+    PENDING,
     ACTIVE,
     COMPLETED,
     REJECTED
