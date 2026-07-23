@@ -11,11 +11,13 @@ import com.example.adsportalbe.models.ad.Ad;
 import com.example.adsportalbe.models.ad.AdClick;
 import com.example.adsportalbe.models.ad.AdDailyStatistics;
 import com.example.adsportalbe.models.ad.AdFormatType;
+import com.example.adsportalbe.models.ad.AdHyperlinkClick;
 import com.example.adsportalbe.models.ad.AdImpression;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.services.FileUploadService;
 import com.example.adsportalbe.repositories.AdClickRepository;
 import com.example.adsportalbe.repositories.AdDailyStatisticsRepository;
+import com.example.adsportalbe.repositories.AdHyperlinkClickRepository;
 import com.example.adsportalbe.repositories.AdImpressionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.regex.MatchResult;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,10 +39,18 @@ public class AdStatisticsService {
 
     private static final ZoneId UTC = ZoneId.of("UTC");
 
+    // Must stay equivalent to the frontend's /(https?:\/\/[^\s]+)/g (AdvertItem
+    // linkifyText) — both sides must identify the same link strings, so no
+    // case-insensitivity and no trailing-punctuation trimming here.
+    private static final Pattern HYPERLINK_PATTERN = Pattern.compile("https?://[^\\s]+");
+
+    private static final int MAX_LINK_URL_LENGTH = 1024;
+
     private final AdService adService;
     private final AdImpressionRepository adImpressionRepository;
     private final AdClickRepository adClickRepository;
     private final AdDailyStatisticsRepository adDailyStatisticsRepository;
+    private final AdHyperlinkClickRepository adHyperlinkClickRepository;
     private final AdCacheService adCacheService;
     private final AdImpressionCacheService adImpressionCacheService;
     private final FileUploadService fileUploadService;
@@ -360,6 +372,61 @@ public class AdStatisticsService {
         log.debug("Registered click for ad {} by user {}", adId, userId);
     }
 
+    /**
+     * Records a click on a specific hyperlink inside an ad's text content. Applies
+     * to all ad formats, including TEXT. Fully separate from {@link #registerClick}
+     * media click-throughs — does not touch AdDailyStatistics or CTR. The URL must
+     * appear verbatim in the ad's textContent; anything else is dropped. Deduplicated
+     * per user per link per UTC day; repeat clicks the same day are silent no-ops.
+     */
+    @Transactional
+    public void registerLinkClick(Long adId, String url, Long userId, String ipAddress) {
+        if (url == null || url.length() > MAX_LINK_URL_LENGTH) {
+            log.warn("Link click ignored: missing or oversized url for ad {}", adId);
+            return;
+        }
+
+        List<Ad> ads = adService.findAllById(List.of(adId));
+        if (ads.isEmpty()) {
+            log.warn("Link click ignored: ad not found with ID: {}", adId);
+            return;
+        }
+        Ad ad = ads.get(0);
+
+        if (!extractHyperlinks(ad.getTextContent()).contains(url)) {
+            log.warn("Link click ignored: url not present in text of ad {}", adId);
+            return;
+        }
+
+        LocalDate today = LocalDate.now(UTC);
+        if (adHyperlinkClickRepository.existsByAd_IdAndLinkUrlAndUserIdAndClickDate(adId, url, userId, today)) {
+            log.debug("Link click ignored: user {} already clicked this link of ad {} today", userId, adId);
+            return;
+        }
+
+        adHyperlinkClickRepository.save(AdHyperlinkClick.builder()
+                .ad(ad)
+                .linkUrl(url)
+                .timestamp(Instant.now())
+                .clickDate(today)
+                .ipAddress(ipAddress)
+                .userId(userId)
+                .build());
+
+        log.debug("Registered link click for ad {} by user {}", adId, userId);
+    }
+
+    // Distinct hyperlinks in text order, as the chat client sees them.
+    private static List<String> extractHyperlinks(String textContent) {
+        if (textContent == null || textContent.isBlank()) {
+            return List.of();
+        }
+        return HYPERLINK_PATTERN.matcher(textContent).results()
+                .map(MatchResult::group)
+                .distinct()
+                .toList();
+    }
+
     private void completeAd(Long adId) {
         // Remove from cache to stop serving
         adCacheService.removeAd(adId);
@@ -465,7 +532,55 @@ public class AdStatisticsService {
                 .todaysClicks(todaysClicks)
                 .overallCtr(computeCtr(totalClicks, ad.getServedViews() != null ? ad.getServedViews().longValue() : 0L))
                 .dailyStats(dailyStatDtos)
+                .linkStats(buildLinkStats(ad, fromDate, today))
                 .build();
+    }
+
+    // Links are derived from textContent (not from recorded clicks) so links
+    // with zero clicks still appear in the advertiser's per-link breakdown.
+    private List<AdDailyStatsResponseDto.LinkStatDto> buildLinkStats(Ad ad, LocalDate fromDate, LocalDate today) {
+        List<String> links = extractHyperlinks(ad.getTextContent());
+        if (links.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, List<AdHyperlinkClickRepository.LinkDailyCount>> countsByUrl =
+                adHyperlinkClickRepository.countDailyByAdId(ad.getId()).stream()
+                        .collect(Collectors.groupingBy(AdHyperlinkClickRepository.LinkDailyCount::getLinkUrl));
+
+        return links.stream()
+                .map(url -> {
+                    List<AdHyperlinkClickRepository.LinkDailyCount> rows =
+                            countsByUrl.getOrDefault(url, List.of());
+
+                    // Lifetime total, independent of fromDate (like totalClicks)
+                    long linkTotalClicks = rows.stream()
+                            .mapToLong(AdHyperlinkClickRepository.LinkDailyCount::getClicks)
+                            .sum();
+
+                    long linkTodaysClicks = rows.stream()
+                            .filter(row -> row.getClickDate().equals(today))
+                            .mapToLong(AdHyperlinkClickRepository.LinkDailyCount::getClicks)
+                            .findFirst()
+                            .orElse(0L);
+
+                    // Same date-desc order and fromDate filter as dailyStats
+                    List<AdDailyStatsResponseDto.LinkDailyStatDto> linkDailyStats = rows.stream()
+                            .filter(row -> fromDate == null || !row.getClickDate().isBefore(fromDate))
+                            .map(row -> AdDailyStatsResponseDto.LinkDailyStatDto.builder()
+                                    .date(row.getClickDate())
+                                    .clicksCount(row.getClicks())
+                                    .build())
+                            .toList();
+
+                    return AdDailyStatsResponseDto.LinkStatDto.builder()
+                            .url(url)
+                            .totalClicks(linkTotalClicks)
+                            .todaysClicks(linkTodaysClicks)
+                            .dailyStats(linkDailyStats)
+                            .build();
+                })
+                .toList();
     }
 
     private Double computeCtr(long clicks, Long views) {

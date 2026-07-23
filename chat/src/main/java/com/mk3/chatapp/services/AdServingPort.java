@@ -26,4 +26,12 @@ public interface AdServingPort {
      * duplicate clicks are silent no-ops.
      */
     void registerClick(Long adId, Long userId, String ipAddress);
+
+    /**
+     * Records a click on a specific hyperlink inside a served ad's text (any
+     * format, including TEXT). Tracked fully separately from media
+     * click-throughs. Deduplicated per user per link per day on the ads side;
+     * duplicate or unrecognized URLs are silent no-ops.
+     */
+    void registerLinkClick(Long adId, String url, Long userId, String ipAddress);
 }

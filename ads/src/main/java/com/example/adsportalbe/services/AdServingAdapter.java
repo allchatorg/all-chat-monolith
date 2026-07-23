@@ -56,4 +56,21 @@ public class AdServingAdapter implements AdServingPort {
             }
         }
     }
+
+    @Override
+    public void registerLinkClick(Long adId, String url, Long userId, String ipAddress) {
+        try {
+            adStatisticsService.registerLinkClick(adId, url, userId, ipAddress);
+        } catch (DataIntegrityViolationException e) {
+            // Duplicate-click race on the (ad_id, link_url, user_id, click_date)
+            // constraint. One retry in a fresh transaction resolves it — the
+            // exists check now sees the row and no-ops.
+            try {
+                adStatisticsService.registerLinkClick(adId, url, userId, ipAddress);
+            } catch (DataIntegrityViolationException retryFailure) {
+                log.warn("Dropping link click for ad {} by user {} after constraint race retry", adId, userId,
+                        retryFailure);
+            }
+        }
+    }
 }

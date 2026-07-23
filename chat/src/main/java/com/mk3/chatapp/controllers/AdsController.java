@@ -1,5 +1,6 @@
 package com.mk3.chatapp.controllers;
 
+import com.mk3.chatapp.dtos.requests.AdLinkClickRequestDTO;
 import com.mk3.chatapp.dtos.responses.AdvertResponseDTO;
 import com.mk3.chatapp.services.AdsService;
 import com.mk3.chatapp.utils.IpAddressUtils;
@@ -8,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -36,6 +38,15 @@ public class AdsController {
     public ResponseEntity<Void> registerClick(@PathVariable Long adId, Principal user, HttpServletRequest request) {
         String ip = IpAddressUtils.getClientIpAddress(request);
         adsService.registerClick(adId, user, ip);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{adId}/link-click")
+    public ResponseEntity<Void> registerLinkClick(@PathVariable Long adId,
+                                                  @RequestBody AdLinkClickRequestDTO requestBody,
+                                                  Principal user, HttpServletRequest request) {
+        String ip = IpAddressUtils.getClientIpAddress(request);
+        adsService.registerLinkClick(adId, requestBody.url(), user, ip);
         return ResponseEntity.noContent().build();
     }
 }

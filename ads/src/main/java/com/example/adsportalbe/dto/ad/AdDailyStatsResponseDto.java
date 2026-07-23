@@ -24,6 +24,9 @@ public class AdDailyStatsResponseDto {
     // Fraction (0.0-1.0), computed at read time as totalClicks / servedViews
     private Double overallCtr;
     private List<DailyStatDto> dailyStats;
+    // Per-hyperlink click stats for links found in the ad's textContent, in
+    // text order. Fully separate from totalClicks/CTR (media click-throughs).
+    private List<LinkStatDto> linkStats;
 
     @Data
     @Builder
@@ -35,5 +38,26 @@ public class AdDailyStatsResponseDto {
         private Long clicksCount;
         // Fraction (0.0-1.0), clicksCount / viewsCount for the day
         private Double ctr;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LinkStatDto {
+        private String url;
+        // Lifetime click count for this link, independent of the fromDate filter
+        private Long totalClicks;
+        private Long todaysClicks;
+        private List<LinkDailyStatDto> dailyStats;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LinkDailyStatDto {
+        private LocalDate date;
+        private Long clicksCount;
     }
 }
