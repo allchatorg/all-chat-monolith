@@ -35,8 +35,12 @@ public class MessageSpecification {
             }
 
             if (request.content() != null && !request.content().isBlank()) {
+                // Match against the marker-stripped copy so **bold**/*italic*
+                // markers can't break phrase matches; pre-column rows have a
+                // null contentPlain and fall back to raw content.
                 predicates.add(criteriaBuilder.like(
-                        criteriaBuilder.lower(root.get("content")),
+                        criteriaBuilder.lower(criteriaBuilder.coalesce(
+                                root.<String>get("contentPlain"), root.get("content"))),
                         "%" + request.content().toLowerCase() + "%"));
             }
 
