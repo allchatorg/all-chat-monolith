@@ -34,4 +34,8 @@ public interface AdminFacadeService {
     void archiveChatRoom(Long roomId);
 
     void unarchiveChatRoom(Long roomId);
+
+    void requireIdVerification(Long userId, Long reportCaseId);
+
+    void clearIdVerificationRequirement(Long userId);
 }

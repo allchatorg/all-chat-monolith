@@ -45,6 +45,8 @@ public class MonolithSecurityConfig {
                         // --- chat public endpoints ---
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
+                        // Stripe Identity webhook: authenticated by signature verification, not session.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/id-verification/webhook").permitAll()
                         // --- ads-portal public endpoints (namespaced under /api/v1/ads-portal) ---
                         // Ads auth is now unified onto chat's /api/v1/auth/** (above); the ads
                         // module no longer exposes its own /ads-portal/auth/* endpoints.

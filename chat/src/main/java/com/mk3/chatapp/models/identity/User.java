@@ -2,6 +2,7 @@ package com.mk3.chatapp.models.identity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.mk3.chatapp.enums.IdVerificationStatus;
 import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.enums.TimeFormat;
 import com.mk3.chatapp.models.*;
@@ -67,6 +68,17 @@ public class User extends Base implements UserDetails {
 
     @Column(name = "banned")
     private boolean banned;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "id_verification_status")
+    private IdVerificationStatus idVerificationStatus = IdVerificationStatus.NONE;
+
+    @Column(name = "id_verification_session_id")
+    private String idVerificationSessionId;
+
+    @Column(name = "id_verification_report_case_id")
+    private Long idVerificationReportCaseId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)

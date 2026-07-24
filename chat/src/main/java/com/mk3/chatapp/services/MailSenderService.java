@@ -17,4 +17,6 @@ public interface MailSenderService {
     void sendBanAppealReceivedEmail(User user);
 
     void sendBanAppealDecisionEmail(User user, boolean approved, String userFacingMessage);
+
+    void sendIdVerificationRequiredEmail(User user);
 }

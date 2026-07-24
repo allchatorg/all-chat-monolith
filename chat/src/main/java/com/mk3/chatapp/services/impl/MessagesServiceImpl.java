@@ -109,6 +109,7 @@ public class MessagesServiceImpl implements MessagesService {
                 messageResponseDTO.senderUsername(),
                 messageResponseDTO.senderRole(),
                 messageResponseDTO.senderCountryCode(),
+                messageResponseDTO.senderIdVerificationStatus(),
                 messageResponseDTO.bannedUser(),
                 messageResponseDTO.deleted(),
                 messageResponseDTO.createdAt(),

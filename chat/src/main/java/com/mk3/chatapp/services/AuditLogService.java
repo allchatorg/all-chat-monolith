@@ -86,6 +86,24 @@ public interface AuditLogService {
             Long chatRoomId,
             String chatRoomName);
 
+    RequireIdVerificationAuditLog logRequireIdVerification(
+            String action,
+            String description,
+            Long targetUserId,
+            Long reportCaseId);
+
+    IdVerificationPassedAuditLog logIdVerificationPassed(
+            String action,
+            String description,
+            Long targetUserId,
+            Long reportCaseId);
+
+    IdVerificationFailedAuditLog logIdVerificationFailed(
+            String action,
+            String description,
+            Long targetUserId,
+            Long reportCaseId);
+
     Optional<AuditLog> getById(Long id);
 
     Page<AuditLog> listAll(Pageable pageable);

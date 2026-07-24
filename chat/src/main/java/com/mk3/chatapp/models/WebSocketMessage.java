@@ -34,6 +34,8 @@ public class WebSocketMessage {
             @JsonSubTypes.Type(value = MessageResponseDTO.class, name = "PRIVATE_MESSAGE_EDIT"),
             @JsonSubTypes.Type(value = MessageResponseDTO.class, name = "PRIVATE_MESSAGE_DELETE"),
             @JsonSubTypes.Type(value = PromotedMessageEventDTO.class, name = "PROMOTED_MESSAGE_UPDATE"),
+            @JsonSubTypes.Type(value = IdVerificationRequiredDTO.class, name = "ID_VERIFICATION_REQUIRED"),
+            @JsonSubTypes.Type(value = IdVerificationResultDTO.class, name = "ID_VERIFICATION_RESULT"),
     })
     private Object data;
 }

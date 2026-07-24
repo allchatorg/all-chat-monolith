@@ -1,5 +1,6 @@
 package com.mk3.chatapp.configs;
 
+import com.mk3.chatapp.enums.IdVerificationStatus;
 import com.mk3.chatapp.enums.RequiredVerificationEnum;
 import com.mk3.chatapp.repositories.UserRepository;
 import com.mk3.chatapp.services.BanCacheService;
@@ -58,6 +59,13 @@ public class UserInterceptor implements ChannelInterceptor {
                 return null;
             }
 
+            // Flagged users may still connect and subscribe (so they receive the
+            // ID_VERIFICATION_RESULT notification live) but cannot send messages.
+            if (requiresIdVerification(userId)) {
+                log.debug("Blocked STOMP SEND for user {} pending identity verification", userId);
+                return null;
+            }
+
             String ipAddress = accessor.getSessionAttributes() == null
                     ? null
                     : (String) accessor.getSessionAttributes().get("ipAddress");
@@ -100,6 +108,18 @@ public class UserInterceptor implements ChannelInterceptor {
         }
         var ban = banCacheService.getBanByUserId(userId);
         return ban != null && ban.isActive();
+    }
+
+    private boolean requiresIdVerification(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+
+        return userRepository.findById(userId)
+                .map(user -> user.getIdVerificationStatus() == IdVerificationStatus.REQUIRED
+                        || user.getIdVerificationStatus() == IdVerificationStatus.PENDING
+                        || user.getIdVerificationStatus() == IdVerificationStatus.REJECTED)
+                .orElse(false);
     }
 
     private boolean isVerificationSatisfied(Long userId, RequiredVerificationEnum requiredVerification) {

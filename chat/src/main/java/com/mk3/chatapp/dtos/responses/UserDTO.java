@@ -1,6 +1,7 @@
 package com.mk3.chatapp.dtos.responses;
 
 import com.mk3.chatapp.dtos.TagDTO;
+import com.mk3.chatapp.enums.IdVerificationStatus;
 import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.enums.TimeFormat;
 
@@ -17,6 +18,7 @@ public record UserDTO(
         Boolean claimed,
         Boolean banned,
         Boolean verified,
+        IdVerificationStatus idVerificationStatus,
         Boolean subscribedToMarketingEmails,
         Boolean appliedForModerator,
         Role role,

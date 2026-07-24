@@ -1,6 +1,7 @@
 package com.mk3.chatapp.dtos.responses;
 
 import com.mk3.chatapp.dtos.AttachmentDTO;
+import com.mk3.chatapp.enums.IdVerificationStatus;
 import com.mk3.chatapp.enums.Role;
 
 import java.util.List;
@@ -14,6 +15,7 @@ public record MessageResponseDTO(
         String senderUsername,
         Role senderRole,
         String senderCountryCode,
+        IdVerificationStatus senderIdVerificationStatus,
         boolean bannedUser,
         boolean deleted,
         String createdAt,
@@ -26,13 +28,13 @@ public record MessageResponseDTO(
 ) {
     public MessageResponseDTO withReplyTo(ReplyInfoDTO replyTo) {
         return new MessageResponseDTO(id, content, chatRoomId, chatRoomName, senderId, senderUsername,
-                senderRole, senderCountryCode, bannedUser, deleted, createdAt, editedAt, color,
-                attachments, reactions, replyTo, promotion);
+                senderRole, senderCountryCode, senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt,
+                color, attachments, reactions, replyTo, promotion);
     }
 
     public MessageResponseDTO withPromotion(PromotionInfoDTO promotion) {
         return new MessageResponseDTO(id, content, chatRoomId, chatRoomName, senderId, senderUsername,
-                senderRole, senderCountryCode, bannedUser, deleted, createdAt, editedAt, color,
-                attachments, reactions, replyTo, promotion);
+                senderRole, senderCountryCode, senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt,
+                color, attachments, reactions, replyTo, promotion);
     }
 }

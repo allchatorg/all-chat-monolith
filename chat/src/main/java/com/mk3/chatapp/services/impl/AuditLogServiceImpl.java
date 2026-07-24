@@ -196,6 +196,57 @@ public class AuditLogServiceImpl implements AuditLogService {
     }
 
     @Override
+    @Transactional
+    public RequireIdVerificationAuditLog logRequireIdVerification(String action, String description, Long targetUserId,
+                                                                  Long reportCaseId) {
+        requireNonNull(action, "action");
+        requireNonNull(targetUserId, "targetUserId");
+
+        RequireIdVerificationAuditLog log = RequireIdVerificationAuditLog.builder()
+                .action(action)
+                .description(description)
+                .logType(AuditLogType.REQUIRE_ID_VERIFICATION)
+                .targetUserId(targetUserId)
+                .reportCaseId(reportCaseId)
+                .build();
+        return auditLogRepository.save(log);
+    }
+
+    @Override
+    @Transactional
+    public IdVerificationPassedAuditLog logIdVerificationPassed(String action, String description, Long targetUserId,
+                                                                Long reportCaseId) {
+        requireNonNull(action, "action");
+        requireNonNull(targetUserId, "targetUserId");
+
+        IdVerificationPassedAuditLog log = IdVerificationPassedAuditLog.builder()
+                .action(action)
+                .description(description)
+                .logType(AuditLogType.ID_VERIFICATION_PASSED)
+                .targetUserId(targetUserId)
+                .reportCaseId(reportCaseId)
+                .build();
+        return auditLogRepository.save(log);
+    }
+
+    @Override
+    @Transactional
+    public IdVerificationFailedAuditLog logIdVerificationFailed(String action, String description, Long targetUserId,
+                                                                Long reportCaseId) {
+        requireNonNull(action, "action");
+        requireNonNull(targetUserId, "targetUserId");
+
+        IdVerificationFailedAuditLog log = IdVerificationFailedAuditLog.builder()
+                .action(action)
+                .description(description)
+                .logType(AuditLogType.ID_VERIFICATION_FAILED)
+                .targetUserId(targetUserId)
+                .reportCaseId(reportCaseId)
+                .build();
+        return auditLogRepository.save(log);
+    }
+
+    @Override
     public Optional<AuditLog> getById(Long id) {
         return auditLogRepository.findById(id);
     }

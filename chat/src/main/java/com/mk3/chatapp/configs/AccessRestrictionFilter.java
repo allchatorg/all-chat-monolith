@@ -3,6 +3,7 @@ package com.mk3.chatapp.configs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mk3.chatapp.dtos.BanResponseDTO;
 import com.mk3.chatapp.dtos.ErrorDTO;
+import com.mk3.chatapp.enums.IdVerificationStatus;
 import com.mk3.chatapp.enums.RequiredVerificationEnum;
 import com.mk3.chatapp.mappers.BanMapper;
 import com.mk3.chatapp.models.Ban;
@@ -46,7 +47,8 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
             Map.entry("/api/v1/users/verify-phone", Set.of("PATCH")),
             Map.entry("/api/v1/chat-rooms/**", Set.of("GET")),
             Map.entry("/api/v1/chatting/messaging-availability", Set.of("GET")),
-            Map.entry("/api/v1/ban-appeals/**", Set.of("GET", "POST"))
+            Map.entry("/api/v1/ban-appeals/**", Set.of("GET", "POST")),
+            Map.entry("/api/v1/id-verification/**", Set.of("GET", "POST"))
     );
     // The only API surface reachable with an active ban: the appeal flow, identity
     // lookup, the ping bootstrap call, logout and login. Deliberately excludes
@@ -91,6 +93,11 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
             }
         }
 
+        if (userId != null && isIdVerificationRequiredForRequest(requestUri, method, userId)) {
+            respondWithIdVerificationRequired(response);
+            return;
+        }
+
         RequiredVerificationEnum verificationRequired = ipService.getRequiredVerification(ipAddress);
         if (isVerificationRequiredForRequest(verificationRequired, requestUri, method, userId)) {
             respondWithVerificationRequired(response, verificationRequired);
@@ -98,6 +105,29 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isIdVerificationRequiredForRequest(String requestUri, String method, Long userId) {
+        boolean idVerificationRequired = userRepository.findById(userId)
+                .map(user -> user.getIdVerificationStatus() == IdVerificationStatus.REQUIRED
+                        || user.getIdVerificationStatus() == IdVerificationStatus.PENDING
+                        || user.getIdVerificationStatus() == IdVerificationStatus.REJECTED)
+                .orElse(false);
+
+        return idVerificationRequired && !isRequestOnAllowedEndpoint(requestUri, method);
+    }
+
+    private void respondWithIdVerificationRequired(HttpServletResponse response) throws IOException {
+        ErrorDTO verificationDTO = new ErrorDTO(
+                HttpServletResponse.SC_FORBIDDEN,
+                "Verification Required",
+                "Please complete the identity verification to access this endpoint",
+                LocalDateTime.now()
+        );
+
+        response.setContentType("application/json");
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.getWriter().write(objectMapper.writeValueAsString(verificationDTO));
     }
 
     private void respondWithVerificationRequired(HttpServletResponse response,
@@ -126,16 +156,20 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
             return false;
         }
 
+        return !isRequestOnAllowedEndpoint(requestUri, method);
+    }
+
+    private boolean isRequestOnAllowedEndpoint(String requestUri, String method) {
         for (Map.Entry<String, Set<String>> entry : ENDPOINT_ALLOWED_METHODS.entrySet()) {
             String pattern = entry.getKey();
             Set<String> allowedMethods = entry.getValue();
 
             if (pathMatcher.match(pattern, requestUri)) {
-                return !allowedMethods.contains(method.toUpperCase(Locale.ROOT));
+                return allowedMethods.contains(method.toUpperCase(Locale.ROOT));
             }
         }
 
-        return true;
+        return false;
     }
 
     private boolean isVerificationSatisfied(RequiredVerificationEnum verificationRequired, Long userId) {

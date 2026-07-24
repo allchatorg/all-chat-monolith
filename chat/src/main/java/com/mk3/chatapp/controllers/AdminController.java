@@ -115,6 +115,22 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/users/{userId}/id-verification/require")
+    @PreAuthorize("@security.canActOnTargetUser(#userId)")
+    public ResponseEntity<Void> requireIdVerification(
+            @PathVariable Long userId,
+            @RequestBody(required = false) RequireIdVerificationRequestDTO request) {
+        adminFacadeService.requireIdVerification(userId, request != null ? request.reportCaseId() : null);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/users/{userId}/id-verification/require")
+    @PreAuthorize("@security.canActOnTargetUser(#userId)")
+    public ResponseEntity<Void> clearIdVerificationRequirement(@PathVariable Long userId) {
+        adminFacadeService.clearIdVerificationRequirement(userId);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/warnings")
     public ResponseEntity<Void> warnUser(@RequestBody WarnUserRequestDTO warnRequestDTO) {
         adminFacadeService.warnUser(warnRequestDTO);

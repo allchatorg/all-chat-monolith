@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title>Identity Verification Required - allchat</title>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: #667eea;
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 1.1em;
+            opacity: 0.9;
+            font-weight: 300;
+            color: white;
+        }
+
+        .content {
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .greeting {
+            font-size: 1.4em;
+            color: #222;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            font-size: 1.1em;
+            color: #444;
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }
+
+        .disclaimer {
+            background: #f0f3f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .disclaimer p {
+            color: #555;
+            font-size: 0.95em;
+            margin: 0;
+        }
+
+        .footer {
+            background: #f0f3f7;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #ddd;
+        }
+
+        .footer-text {
+            color: #555;
+            font-size: 1.1em;
+            line-height: 1.8;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+
+            .header,
+            .content,
+            .footer {
+                padding: 30px 20px;
+            }
+
+            .logo {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">allchat</div>
+        <div class="tagline">Connect • Chat • Share</div>
+    </div>
+
+    <div class="content">
+        <div class="greeting">
+            Hello <span th:text="${name}">User</span>,
+        </div>
+
+        <div class="message">
+            Your account requires identity verification.<br>
+            To keep allchat a safe, 18+ community, we need you to verify your identity with a
+            government-issued photo ID before you can continue using the app. Log in at
+            <a th:href="${verificationLink}" th:text="${verificationLink}">allchat</a> and follow
+            the on-screen instructions to complete the verification.
+        </div>
+
+        <div class="disclaimer">
+            <p>Your document is processed securely by our verification partner. Access to your
+                account remains restricted until the verification is completed.</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-text">
+                <span>©2026 allchat LLC. All rights reserved. 18+ only. allchat<span
+                        class="align-super text-[0.45rem] md:text-[0.55rem]">®</span> is a registered trademark of
+                    allchat LLC.</span>
+        </div>
+    </div>
+</div>
+</body>
+
+</html>

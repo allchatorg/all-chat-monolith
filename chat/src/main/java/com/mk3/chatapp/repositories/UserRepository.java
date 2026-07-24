@@ -41,4 +41,6 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
 
     List<User> findByRoleIn(java.util.Collection<com.mk3.chatapp.enums.Role> roles);
 
+    Optional<User> findByIdVerificationSessionId(String idVerificationSessionId);
+
 }
