@@ -50,6 +50,24 @@ public final class MessageMarkers {
         return out.toString();
     }
 
+    /**
+     * Extracts URLs the same way the frontend's extractFormattedUrls does:
+     * per line, with trailing formatting asterisks trimmed off each URL.
+     * Returned in document order, not deduplicated.
+     */
+    public static List<String> extractUrls(String text) {
+        List<String> urls = new ArrayList<>();
+        if (text == null || text.isBlank()) {
+            return urls;
+        }
+        for (String line : text.split("\n", -1)) {
+            for (UrlRange range : findUrlRanges(line)) {
+                urls.add(line.substring(range.start(), range.end()));
+            }
+        }
+        return urls;
+    }
+
     private static List<UrlRange> findUrlRanges(String line) {
         List<UrlRange> ranges = new ArrayList<>();
         Matcher matcher = URL_PATTERN.matcher(line);

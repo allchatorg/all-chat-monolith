@@ -15,6 +15,7 @@ import com.example.adsportalbe.models.ad.AdHyperlinkClick;
 import com.example.adsportalbe.models.ad.AdImpression;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.services.FileUploadService;
+import com.mk3.chatapp.utils.MessageMarkers;
 import com.example.adsportalbe.repositories.AdClickRepository;
 import com.example.adsportalbe.repositories.AdDailyStatisticsRepository;
 import com.example.adsportalbe.repositories.AdHyperlinkClickRepository;
@@ -28,8 +29,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
-import java.util.regex.MatchResult;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,11 +37,6 @@ import java.util.stream.Collectors;
 public class AdStatisticsService {
 
     private static final ZoneId UTC = ZoneId.of("UTC");
-
-    // Must stay equivalent to the frontend's /(https?:\/\/[^\s]+)/g (AdvertItem
-    // linkifyText) — both sides must identify the same link strings, so no
-    // case-insensitivity and no trailing-punctuation trimming here.
-    private static final Pattern HYPERLINK_PATTERN = Pattern.compile("https?://[^\\s]+");
 
     private static final int MAX_LINK_URL_LENGTH = 1024;
 
@@ -417,12 +411,11 @@ public class AdStatisticsService {
     }
 
     // Distinct hyperlinks in text order, as the chat client sees them.
+    // Delegates to MessageMarkers so URL detection (including trimming of
+    // trailing formatting asterisks) stays identical to the frontend's
+    // tokenize()/extractFormattedUrls in messageMarkers.ts.
     private static List<String> extractHyperlinks(String textContent) {
-        if (textContent == null || textContent.isBlank()) {
-            return List.of();
-        }
-        return HYPERLINK_PATTERN.matcher(textContent).results()
-                .map(MatchResult::group)
+        return MessageMarkers.extractUrls(textContent).stream()
                 .distinct()
                 .toList();
     }
