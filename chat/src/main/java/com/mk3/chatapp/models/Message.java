@@ -30,7 +30,8 @@ public class Message extends Base {
     @JoinColumn(name = "chatroom_id")
     private ChatRoom chatRoom;
 
-    @Column(nullable = false, length = 500)
+    // Raw marker text; capped by MessagesServiceImpl.MAX_RAW_LENGTH
+    @Column(nullable = false, length = 2000)
     private String content;
 
     // Marker-stripped copy of content kept for LIKE search; null on rows
