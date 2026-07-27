@@ -23,7 +23,8 @@ public class MessageEditHistory extends Base {
     @JoinColumn(name = "message_id", nullable = false)
     private Message message;
 
-    @Column(nullable = false, length = 500)
+    // Archives prior raw marker text; sized to Message.content
+    @Column(nullable = false, length = 2000)
     private String content;
 
     @ManyToOne

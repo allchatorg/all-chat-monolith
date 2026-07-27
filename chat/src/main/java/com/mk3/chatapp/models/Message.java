@@ -1,6 +1,7 @@
 package com.mk3.chatapp.models;
 
 import com.mk3.chatapp.models.identity.User;
+import com.mk3.chatapp.utils.MessageMarkers;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
@@ -29,8 +30,20 @@ public class Message extends Base {
     @JoinColumn(name = "chatroom_id")
     private ChatRoom chatRoom;
 
-    @Column(nullable = false, length = 500)
+    // Raw marker text; capped by MessagesServiceImpl.MAX_RAW_LENGTH
+    @Column(nullable = false, length = 2000)
     private String content;
+
+    // Marker-stripped copy of content kept for LIKE search; null on rows
+    // written before the column existed (search falls back to content).
+    @Column(name = "content_plain", length = 500)
+    private String contentPlain;
+
+    @PrePersist
+    @PreUpdate
+    private void syncContentPlain() {
+        contentPlain = MessageMarkers.strip(content);
+    }
 
     @ManyToOne
     @JoinColumn(name = "user_id")

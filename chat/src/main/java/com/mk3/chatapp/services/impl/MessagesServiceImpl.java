@@ -17,6 +17,7 @@ import com.mk3.chatapp.repositories.MessageRepository;
 import com.mk3.chatapp.repositories.UserChatRoomRepository;
 import com.mk3.chatapp.services.*;
 import com.mk3.chatapp.specifications.MessageSpecification;
+import com.mk3.chatapp.utils.MessageMarkers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -36,6 +37,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MessagesServiceImpl implements MessagesService {
     public static final int MAX_LENGTH = 500;
+    // Hard ceiling on raw stored content: the editor wraps each styled run in at
+    // most 6 marker chars and needs >=1 visible char inside each group and
+    // between groups, so raw <= 4 * visible for any legitimate message.
+    public static final int MAX_RAW_LENGTH = 4 * MAX_LENGTH;
     private final MessageRepository messageRepository;
 
     private final WebSocketBroadcastService webSocketBroadcastService;
@@ -57,7 +62,12 @@ public class MessagesServiceImpl implements MessagesService {
             throw new IllegalArgumentException("Message content cannot be null or empty");
         }
 
-        if (content.length() > maxLength) {
+        if (content.length() > MAX_RAW_LENGTH) {
+            throw new IllegalArgumentException(
+                    "Message content exceeds maximum raw length of " + MAX_RAW_LENGTH + " characters");
+        }
+
+        if (MessageMarkers.strip(content).length() > maxLength) {
             throw new IllegalArgumentException(
                     "Message content exceeds maximum length of " + maxLength + " characters");
         }
@@ -79,7 +89,12 @@ public class MessagesServiceImpl implements MessagesService {
 
         // If content is provided, validate length and content rules
         if (content != null && !content.isEmpty()) {
-            if (content.length() > maxLength) {
+            if (content.length() > MAX_RAW_LENGTH) {
+                throw new IllegalArgumentException(
+                        "Message content exceeds maximum raw length of " + MAX_RAW_LENGTH + " characters");
+            }
+
+            if (MessageMarkers.strip(content).length() > maxLength) {
                 throw new IllegalArgumentException(
                         "Message content exceeds maximum length of " + maxLength + " characters");
             }

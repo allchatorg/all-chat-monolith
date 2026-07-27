@@ -18,6 +18,7 @@ import com.example.adsportalbe.services.PaymentService;
 import com.example.adsportalbe.specifications.AdSpecification;
 import com.example.adsportalbe.utils.Utils;
 import com.mk3.chatapp.models.identity.User;
+import com.mk3.chatapp.utils.MessageMarkers;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,12 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class AdServiceImpl implements AdService {
+
+    // Ad text carries the same **bold**/*italic* markers as chat messages:
+    // the visible (stripped) text is limited to 500 chars, the raw marker
+    // string to 4x that — mirroring MessagesServiceImpl.
+    public static final int MAX_TEXT_LENGTH = 500;
+    public static final int MAX_RAW_TEXT_LENGTH = 4 * MAX_TEXT_LENGTH;
 
     private final AdRepository adRepository;
     private final PaymentReceiptRepository paymentReceiptRepository;
@@ -95,6 +102,15 @@ public class AdServiceImpl implements AdService {
 
         if (request.getViewsBought() == null || request.getViewsBought() <= 0) {
             throw new IllegalArgumentException("Views bought must be greater than 0");
+        }
+
+        if (request.getText() != null) {
+            if (request.getText().length() > MAX_RAW_TEXT_LENGTH) {
+                throw new IllegalArgumentException("Ad text exceeds " + MAX_RAW_TEXT_LENGTH + " characters");
+            }
+            if (MessageMarkers.strip(request.getText()).length() > MAX_TEXT_LENGTH) {
+                throw new IllegalArgumentException("Ad text exceeds " + MAX_TEXT_LENGTH + " visible characters");
+            }
         }
 
         // 2. Fetch Ad Format
@@ -189,8 +205,12 @@ public class AdServiceImpl implements AdService {
             }
         }
 
-        if (textTiers != null && !textTiers.isEmpty() && text != null && !text.isEmpty()) {
-            int charCount = text.length();
+        // Pricing counts the visible (stripped) text, matching the frontend's
+        // stripMarkers-based calculation — otherwise the price-deviation check
+        // above would reject ads that use formatting.
+        String visibleText = text != null ? MessageMarkers.strip(text) : null;
+        if (textTiers != null && !textTiers.isEmpty() && visibleText != null && !visibleText.isEmpty()) {
+            int charCount = visibleText.length();
             // Sort by maxCharacters asc
             List<TextPricingTierRule> sortedTiers = new ArrayList<>(textTiers);
             sortedTiers.sort(Comparator.comparingInt(TextPricingTierRule::getMaxCharacters));
