@@ -1,5 +1,6 @@
 package com.mk3.chatapp.services.schedulers;
 
+import com.mk3.chatapp.services.IdVerificationService;
 import com.mk3.chatapp.services.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -10,9 +11,11 @@ import org.springframework.stereotype.Component;
 public class CronJobs {
 
     private final UserService userService;
+    private final IdVerificationService idVerificationService;
 
     @Scheduled(cron = "0 0 0 * * ?")
     public void dailyTask() {
         userService.deleteStaleAccounts();
+        idVerificationService.promoteEligibleUnderageUsers();
     }
 }

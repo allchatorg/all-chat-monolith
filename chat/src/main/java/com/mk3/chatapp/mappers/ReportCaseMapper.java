@@ -25,6 +25,7 @@ public interface ReportCaseMapper {
 
     @Mapping(target = "message", source = "message")
     @Mapping(target = "reportCount", expression = "java(reportCase.getReports() != null ? reportCase.getReports().size() : 0)")
+    @Mapping(target = "reportTypes", expression = "java(reportCase.getReports() != null ? reportCase.getReports().stream().map(com.mk3.chatapp.models.Report::getReportType).distinct().toList() : java.util.List.of())")
     @Mapping(target = "resolver", source = "resolver")
     @Mapping(target = "needsAttentionAt", source = "needsAttentionAt", qualifiedByName = "instantToString")
     @Mapping(target = "resolutionDate", source = "resolutionDate", qualifiedByName = "instantToString")

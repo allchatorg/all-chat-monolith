@@ -69,6 +69,10 @@ app:
 # --- ads-portal module config ---
 stripe:
   api-key: ${STRIPE_API_KEY}
+  # --- chat module: Stripe Identity (ID/age verification) ---
+  secret-key: ${STRIPE_SECRET_KEY}
+  identity:
+    webhook-secret: ${STRIPE_IDENTITY_WEBHOOK_SECRET}
 
 # --- chat module config ---
 wasabi:

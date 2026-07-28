@@ -45,6 +45,7 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
     private final AuditLogService auditLogService;
     private final ChatRoomService chatRoomService;
     private final RoomActivityService roomActivityService;
+    private final IdVerificationService idVerificationService;
 
     private final UserMapper userMapper;
     private final AuditLogCustomMapper auditLogCustomMapper;
@@ -161,8 +162,9 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
                 .map(UsernameHistory::getUsername).toList();
 
         return new UserAdminViewDTO(user.getId(), user.getApplicationUsername(), user.getEmail(), user.isOver18(),
-                user.isClaimed(), user.isVerified(), user.isBanned(), user.getRole(), user.getTotalUploadUsage(),
-                usernameHistory, user.getCreatedAt(), lastSession.get().getCreatedAt(), user.getCountryCode());
+                user.isClaimed(), user.isVerified(), user.isBanned(), user.getIdVerificationStatus(), user.getRole(),
+                user.getTotalUploadUsage(), usernameHistory, user.getCreatedAt(), lastSession.get().getCreatedAt(),
+                user.getCountryCode());
     }
 
     @Override
@@ -217,5 +219,15 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
 
     private ChatRoomDTO buildChatRoomStatusPayload(Long chatRoomId, String chatRoomName, boolean archived) {
         return new ChatRoomDTO(chatRoomId, chatRoomName, List.of(), archived);
+    }
+
+    @Override
+    public void requireIdVerification(Long userId, Long reportCaseId) {
+        idVerificationService.requireIdVerification(userId, reportCaseId);
+    }
+
+    @Override
+    public void clearIdVerificationRequirement(Long userId) {
+        idVerificationService.clearIdVerificationRequirement(userId);
     }
 }

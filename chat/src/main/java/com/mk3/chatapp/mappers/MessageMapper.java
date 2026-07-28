@@ -20,6 +20,7 @@ public interface MessageMapper {
     @Mapping(target = "createdAt", source = "message.createdAt", qualifiedByName = "instantToString")
     @Mapping(target = "color", source = "message.sender.displayColor")
     @Mapping(target = "senderCountryCode", source = "message.sender.countryCode")
+    @Mapping(target = "senderIdVerificationStatus", source = "message.sender.idVerificationStatus")
     @Mapping(target = "replyTo", expression = "java(toReplyInfoDTO(message.getReplyTo(), false))")
     @Mapping(target = "promotion", ignore = true)
     MessageResponseDTO toMessageResponseDTO(Message message);

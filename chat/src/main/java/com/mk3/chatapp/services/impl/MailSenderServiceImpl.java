@@ -167,6 +167,33 @@ public class MailSenderServiceImpl implements MailSenderService {
     }
 
     @Override
+    public void sendIdVerificationRequiredEmail(User user) {
+        if (user.getEmail() == null) {
+            return;
+        }
+
+        Context context = new Context();
+        context.setVariable("name", user.getApplicationUsername());
+        context.setVariable("verificationLink", FRONT_END_URL);
+
+        String htmlContent = templateEngine.process("ID_VERIFICATION_REQUIRED_TEMPLATE", context);
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+
+            helper.setTo(user.getEmail());
+            helper.setSubject("Identity verification required");
+            helper.setText(htmlContent, true);
+            helper.setFrom(MAIL_USERNAME, FROM_NAME);
+
+            mailSender.send(message);
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            throw new RuntimeException("Failed to send identity verification required email", e);
+        }
+    }
+
+    @Override
     public void sendModeratorApplicationEmail(User user,
                                               ModeratorApplicationRequest request) {
         Context context = new Context();

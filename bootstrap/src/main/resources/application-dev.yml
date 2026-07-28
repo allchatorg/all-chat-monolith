@@ -64,6 +64,9 @@ app:
 
 stripe:
   api-key: ${STRIPE_API_KEY:sk_test_dummy}
+  secret-key: ${STRIPE_SECRET_KEY:sk_test_dummy}
+  identity:
+    webhook-secret: ${STRIPE_IDENTITY_WEBHOOK_SECRET:whsec_dummy}
 
 wasabi:
   s3:

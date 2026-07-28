@@ -43,6 +43,7 @@ public class MessageHistoryTransformerImpl implements MessageHistoryTransformer 
         String createdAt = message != null ? DateTimeMapperUtil.instantToString(message.getCreatedAt()) : null;
         String editedAt = DateTimeMapperUtil.instantToString(history.getCreatedAt());
         String color = sender != null ? sender.getDisplayColor() : null;
+        var senderIdVerificationStatus = sender != null ? sender.getIdVerificationStatus() : null;
 
 
         // Reactions are intentionally not mapped for history response per requirement
@@ -55,6 +56,7 @@ public class MessageHistoryTransformerImpl implements MessageHistoryTransformer 
                 senderUsername,
                 senderRole,
                 null,
+                senderIdVerificationStatus,
                 bannedUser,
                 deleted,
                 createdAt,

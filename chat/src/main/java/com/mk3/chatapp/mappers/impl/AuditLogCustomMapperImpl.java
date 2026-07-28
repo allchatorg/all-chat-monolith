@@ -205,6 +205,62 @@ public class AuditLogCustomMapperImpl implements AuditLogCustomMapper {
                 );
             }
 
+            case REQUIRE_ID_VERIFICATION -> {
+                RequireIdVerificationAuditLog requireLog = (RequireIdVerificationAuditLog) auditLog;
+                return new IdVerificationAuditLogDTO(
+                        requireLog.getId(),
+                        requireLog.getCreatedAt().toString(),
+                        createdBy,
+                        createdByType,
+                        requireLog.getAction(),
+                        requireLog.getDescription(),
+                        requireLog.getLogType(),
+                        userMapper.toDto(userService.findById(requireLog.getTargetUserId())),
+                        requireLog.getReportCaseId());
+            }
+
+            case CLEAR_ID_VERIFICATION -> {
+                ClearIdVerificationAuditLog clearLog = (ClearIdVerificationAuditLog) auditLog;
+                return new IdVerificationAuditLogDTO(
+                        clearLog.getId(),
+                        clearLog.getCreatedAt().toString(),
+                        createdBy,
+                        createdByType,
+                        clearLog.getAction(),
+                        clearLog.getDescription(),
+                        clearLog.getLogType(),
+                        userMapper.toDto(userService.findById(clearLog.getTargetUserId())),
+                        clearLog.getReportCaseId());
+            }
+
+            case ID_VERIFICATION_PASSED -> {
+                IdVerificationPassedAuditLog passedLog = (IdVerificationPassedAuditLog) auditLog;
+                return new IdVerificationAuditLogDTO(
+                        passedLog.getId(),
+                        passedLog.getCreatedAt().toString(),
+                        createdBy,
+                        createdByType,
+                        passedLog.getAction(),
+                        passedLog.getDescription(),
+                        passedLog.getLogType(),
+                        userMapper.toDto(userService.findById(passedLog.getTargetUserId())),
+                        passedLog.getReportCaseId());
+            }
+
+            case ID_VERIFICATION_FAILED -> {
+                IdVerificationFailedAuditLog failedLog = (IdVerificationFailedAuditLog) auditLog;
+                return new IdVerificationAuditLogDTO(
+                        failedLog.getId(),
+                        failedLog.getCreatedAt().toString(),
+                        createdBy,
+                        createdByType,
+                        failedLog.getAction(),
+                        failedLog.getDescription(),
+                        failedLog.getLogType(),
+                        userMapper.toDto(userService.findById(failedLog.getTargetUserId())),
+                        failedLog.getReportCaseId());
+            }
+
             default -> {
                 throw new IllegalArgumentException("Unknown AuditLogType " + type);
             }
