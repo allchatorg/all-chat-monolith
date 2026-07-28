@@ -19,6 +19,7 @@ public record UserDTO(
         Boolean banned,
         Boolean verified,
         IdVerificationStatus idVerificationStatus,
+        Boolean idVerificationUnderAge,
         Boolean subscribedToMarketingEmails,
         Boolean appliedForModerator,
         Role role,

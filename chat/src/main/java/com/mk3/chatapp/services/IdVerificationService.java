@@ -14,4 +14,6 @@ public interface IdVerificationService {
     IdVerificationStatusResponseDTO getOwnStatus();
 
     void handleWebhookEvent(String payload, String signatureHeader);
+
+    void promoteEligibleUnderageUsers();
 }

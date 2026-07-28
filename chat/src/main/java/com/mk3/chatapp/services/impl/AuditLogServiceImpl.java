@@ -214,6 +214,23 @@ public class AuditLogServiceImpl implements AuditLogService {
 
     @Override
     @Transactional
+    public ClearIdVerificationAuditLog logClearIdVerification(String action, String description, Long targetUserId,
+                                                              Long reportCaseId) {
+        requireNonNull(action, "action");
+        requireNonNull(targetUserId, "targetUserId");
+
+        ClearIdVerificationAuditLog log = ClearIdVerificationAuditLog.builder()
+                .action(action)
+                .description(description)
+                .logType(AuditLogType.CLEAR_ID_VERIFICATION)
+                .targetUserId(targetUserId)
+                .reportCaseId(reportCaseId)
+                .build();
+        return auditLogRepository.save(log);
+    }
+
+    @Override
+    @Transactional
     public IdVerificationPassedAuditLog logIdVerificationPassed(String action, String description, Long targetUserId,
                                                                 Long reportCaseId) {
         requireNonNull(action, "action");

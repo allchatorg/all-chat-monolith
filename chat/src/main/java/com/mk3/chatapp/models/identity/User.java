@@ -13,6 +13,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -79,6 +80,9 @@ public class User extends Base implements UserDetails {
 
     @Column(name = "id_verification_report_case_id")
     private Long idVerificationReportCaseId;
+
+    @Column(name = "verified_date_of_birth")
+    private LocalDate verifiedDateOfBirth;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)

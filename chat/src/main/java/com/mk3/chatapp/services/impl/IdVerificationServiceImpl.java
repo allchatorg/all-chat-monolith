@@ -1,15 +1,13 @@
 package com.mk3.chatapp.services.impl;
 
-import com.mk3.chatapp.dtos.responses.IdVerificationRequiredDTO;
-import com.mk3.chatapp.dtos.responses.IdVerificationResultDTO;
 import com.mk3.chatapp.dtos.responses.IdVerificationSessionResponseDTO;
 import com.mk3.chatapp.dtos.responses.IdVerificationStatusResponseDTO;
 import com.mk3.chatapp.enums.IdVerificationStatus;
-import com.mk3.chatapp.enums.WebSocketMessageType;
+import com.mk3.chatapp.events.IdVerificationRequiredEvent;
+import com.mk3.chatapp.events.IdVerificationResultEvent;
 import com.mk3.chatapp.exceptions.ConflictException;
 import com.mk3.chatapp.models.AuditLog;
 import com.mk3.chatapp.models.ReportCase;
-import com.mk3.chatapp.models.WebSocketMessage;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.repositories.UserRepository;
 import com.mk3.chatapp.services.*;
@@ -25,6 +23,7 @@ import com.stripe.param.identity.VerificationSessionRetrieveParams;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +32,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -49,8 +49,8 @@ public class IdVerificationServiceImpl implements IdVerificationService {
     private final SecurityService securityService;
     private final AuditLogService auditLogService;
     private final ReportCaseService reportCaseService;
-    private final WebSocketBroadcastService webSocketBroadcastService;
     private final MailSenderService mailSenderService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${stripe.secret-key}")
     private String stripeSecretKey;
@@ -89,26 +89,32 @@ public class IdVerificationServiceImpl implements IdVerificationService {
             addLogToReportCase(reportCaseId, auditLog);
         }
 
-        webSocketBroadcastService.broadcastToUser(targetUserId, WebSocketMessage.builder()
-                .type(WebSocketMessageType.ID_VERIFICATION_REQUIRED)
-                .data(new IdVerificationRequiredDTO(targetUserId, reportCaseId))
-                .build());
-
-        try {
-            mailSenderService.sendIdVerificationRequiredEmail(targetUser);
-        } catch (Exception e) {
-            log.error("Failed to send identity verification required email to user {}", targetUserId, e);
-        }
+        eventPublisher.publishEvent(new IdVerificationRequiredEvent(targetUserId, reportCaseId));
     }
 
     @Override
     @Transactional
     public void clearIdVerificationRequirement(Long targetUserId) {
         User targetUser = userService.findById(targetUserId);
+
+        if (targetUser.getIdVerificationStatus() == IdVerificationStatus.VERIFIED) {
+            throw new ConflictException("User has already passed identity verification; there is no requirement to clear");
+        }
+
+        Long reportCaseId = targetUser.getIdVerificationReportCaseId();
         targetUser.setIdVerificationStatus(IdVerificationStatus.NONE);
         targetUser.setIdVerificationSessionId(null);
         targetUser.setIdVerificationReportCaseId(null);
         userService.save(targetUser);
+
+        AuditLog auditLog = auditLogService.logClearIdVerification(
+                "CLEAR_ID_VERIFICATION",
+                "The identity verification requirement was cleared for the user",
+                targetUserId,
+                reportCaseId);
+        if (reportCaseId != null) {
+            addLogToReportCase(reportCaseId, auditLog);
+        }
     }
 
     @Override
@@ -119,6 +125,10 @@ public class IdVerificationServiceImpl implements IdVerificationService {
 
         if (status != IdVerificationStatus.REQUIRED && status != IdVerificationStatus.REJECTED) {
             throw new ConflictException("Identity verification session can only be started when verification is required");
+        }
+
+        if (status == IdVerificationStatus.REJECTED && user.getVerifiedDateOfBirth() != null) {
+            throw new ConflictException("You must be 18 or older. Access will be granted automatically once you turn 18.");
         }
 
         VerificationSessionCreateParams params = VerificationSessionCreateParams.builder()
@@ -176,6 +186,18 @@ public class IdVerificationServiceImpl implements IdVerificationService {
         }
     }
 
+    @Override
+    @Transactional
+    public void promoteEligibleUnderageUsers() {
+        LocalDate cutoff = LocalDate.now().minusYears(ADULT_AGE);
+        List<User> eligible = userRepository.findByIdVerificationStatusAndVerifiedDateOfBirthLessThanEqual(
+                IdVerificationStatus.REJECTED, cutoff);
+        for (User user : eligible) {
+            log.info("Auto-promoting user {}: previously rejected as underage, now of age", user.getId());
+            passVerification(user, user.getIdVerificationReportCaseId());
+        }
+    }
+
     private void handleSessionVerified(Event event) {
         VerificationSession eventSession = extractSession(event);
 
@@ -183,7 +205,7 @@ public class IdVerificationServiceImpl implements IdVerificationService {
         try {
             session = VerificationSession.retrieve(
                     eventSession.getId(),
-                    VerificationSessionRetrieveParams.builder().addExpand("verified_outputs").build(),
+                    VerificationSessionRetrieveParams.builder().addExpand("verified_outputs.dob").build(),
                     requestOptions());
         } catch (StripeException e) {
             log.error("Failed to retrieve Stripe identity verification session {}", eventSession.getId(), e);
@@ -206,6 +228,7 @@ public class IdVerificationServiceImpl implements IdVerificationService {
         LocalDate birthDate = LocalDate.of(dob.getYear().intValue(), dob.getMonth().intValue(), dob.getDay().intValue());
         int age = Period.between(birthDate, LocalDate.now()).getYears();
         Long reportCaseId = user.getIdVerificationReportCaseId();
+        user.setVerifiedDateOfBirth(birthDate);
 
         if (age >= ADULT_AGE) {
             passVerification(user, reportCaseId);
@@ -274,13 +297,7 @@ public class IdVerificationServiceImpl implements IdVerificationService {
     }
 
     private void notifyResult(User user, Long reportCaseId, boolean passed) {
-        WebSocketMessage webSocketMessage = WebSocketMessage.builder()
-                .type(WebSocketMessageType.ID_VERIFICATION_RESULT)
-                .data(new IdVerificationResultDTO(user.getId(), reportCaseId, passed))
-                .build();
-
-        webSocketBroadcastService.broadcastToUser(user.getId(), webSocketMessage);
-        webSocketBroadcastService.broadcastToUsers(userService.findStaffMembers(), webSocketMessage);
+        eventPublisher.publishEvent(new IdVerificationResultEvent(user.getId(), reportCaseId, passed));
     }
 
     private User resolveUser(VerificationSession session) {

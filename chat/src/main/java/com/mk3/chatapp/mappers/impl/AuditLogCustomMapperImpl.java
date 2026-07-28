@@ -219,6 +219,20 @@ public class AuditLogCustomMapperImpl implements AuditLogCustomMapper {
                         requireLog.getReportCaseId());
             }
 
+            case CLEAR_ID_VERIFICATION -> {
+                ClearIdVerificationAuditLog clearLog = (ClearIdVerificationAuditLog) auditLog;
+                return new IdVerificationAuditLogDTO(
+                        clearLog.getId(),
+                        clearLog.getCreatedAt().toString(),
+                        createdBy,
+                        createdByType,
+                        clearLog.getAction(),
+                        clearLog.getDescription(),
+                        clearLog.getLogType(),
+                        userMapper.toDto(userService.findById(clearLog.getTargetUserId())),
+                        clearLog.getReportCaseId());
+            }
+
             case ID_VERIFICATION_PASSED -> {
                 IdVerificationPassedAuditLog passedLog = (IdVerificationPassedAuditLog) auditLog;
                 return new IdVerificationAuditLogDTO(

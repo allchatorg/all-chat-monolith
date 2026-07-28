@@ -92,6 +92,12 @@ public interface AuditLogService {
             Long targetUserId,
             Long reportCaseId);
 
+    ClearIdVerificationAuditLog logClearIdVerification(
+            String action,
+            String description,
+            Long targetUserId,
+            Long reportCaseId);
+
     IdVerificationPassedAuditLog logIdVerificationPassed(
             String action,
             String description,

@@ -11,6 +11,8 @@ public interface UserMapper {
     @Mapping(source = "over18", target = "isOver18")
     @Mapping(target = "username", expression = "java(user.getApplicationUsername())")
     @Mapping(target = "banned", source = "banned")
+    @Mapping(target = "idVerificationUnderAge", expression =
+            "java(user.getIdVerificationStatus() == com.mk3.chatapp.enums.IdVerificationStatus.REJECTED && user.getVerifiedDateOfBirth() != null)")
     UserDTO toDto(User user);
 
     @Mapping(target = "username", expression = "java(user.getApplicationUsername())")
