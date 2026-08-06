@@ -204,6 +204,20 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
                 new WebSocketMessage(WebSocketMessageType.CHATROOM_ARCHIVED, chatRoom.getName(),
                         buildChatRoomStatusPayload(chatRoom.getId(), chatRoom.getName(), true)));
         auditLogService.logArchiveChatRoom("ARCHIVE_CHATROOM", "Archived chat room: " + chatRoom.getName(), roomId, chatRoom.getName());
+
+        // Runs after the archive is committed — a payment-provider failure must
+        // never fail or roll back the archive itself.
+        try {
+            var promotionResult = messagePromotionPort.cancelActivePromotionsForRoom(roomId);
+            if (promotionResult.attempted() > 0) {
+                log.info("Archive of room {}: canceled {}/{} active promotion(s) — {} pending hold(s) released, {} approved payment(s) refunded, total {} {}",
+                        roomId, promotionResult.released() + promotionResult.refunded(), promotionResult.attempted(),
+                        promotionResult.released(), promotionResult.refunded(),
+                        promotionResult.totalReturned(), promotionResult.currency());
+            }
+        } catch (Exception e) {
+            log.error("Failed to cancel promoted messages for archived room {}", roomId, e);
+        }
     }
 
     @Override
@@ -216,6 +230,18 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
                 new WebSocketMessage(WebSocketMessageType.CHATROOM_UNARCHIVED, chatRoom.getName(),
                         buildChatRoomStatusPayload(chatRoom.getId(), chatRoom.getName(), false)));
         auditLogService.logUnarchiveChatRoom("UNARCHIVE_CHATROOM", "Unarchived chat room: " + chatRoom.getName(), roomId, chatRoom.getName());
+    }
+
+    @Override
+    @PreAuthorize("@security.isAdmin()")
+    public RoomPromotionsSummaryDTO getRoomPromotionsSummary(Long roomId) {
+        var summary = messagePromotionPort.getRoomPromotionsSummary(roomId);
+        return new RoomPromotionsSummaryDTO(
+                summary.pendingCount(),
+                summary.approvedCount(),
+                summary.pendingReleaseTotal(),
+                summary.approvedRefundTotal(),
+                summary.currency());
     }
 
     private ChatRoomDTO buildChatRoomStatusPayload(Long chatRoomId, String chatRoomName, boolean archived) {

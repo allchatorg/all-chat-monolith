@@ -68,7 +68,22 @@ public interface PromotedMessageService {
 
     Page<Long> getApprovedPromotedMessageIds(Long roomId, int page, int size);
 
+    RoomPromotionsSummary getRoomPromotionsSummary(Long roomId);
+
+    /**
+     * Cancels every active (PENDING or APPROVED) promotion in a room being
+     * archived, marking each CANCELED by ADMIN. Archiving is a platform
+     * decision, not a moderation one, so APPROVED payments ARE refunded;
+     * PENDING holds are released. Per-item failures are logged and skipped,
+     * never thrown.
+     */
+    PromotionCancelOutcome cancelPromotionsForArchivedRoom(Long roomId);
+
     record PromotionCancelOutcome(int attempted, int released, int refunded, double totalReturned, String currency) {
+    }
+
+    record RoomPromotionsSummary(int pendingCount, int approvedCount,
+                                 double pendingReleaseTotal, double approvedRefundTotal, String currency) {
     }
 
     record ActivePromotion(Long id, PromotedMessageStatus status) {

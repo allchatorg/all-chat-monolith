@@ -484,6 +484,79 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     }
 
     @Override
+    public RoomPromotionsSummary getRoomPromotionsSummary(Long roomId) {
+        if (roomId == null) {
+            throw new IllegalArgumentException("Room ID cannot be null");
+        }
+
+        List<PromotedMessage> active =
+                promotedMessageRepository.findByChatRoomIdAndStatusIn(roomId, ACTIVE_STATUSES);
+        Map<PromotedMessageStatus, Long> counts = active.stream()
+                .collect(Collectors.groupingBy(PromotedMessage::getStatus, Collectors.counting()));
+        String currency = active.stream()
+                .map(PromotedMessage::getCurrency)
+                .filter(c -> c != null && !c.isBlank())
+                .findFirst()
+                .orElse("USD");
+
+        return new RoomPromotionsSummary(
+                counts.getOrDefault(PromotedMessageStatus.PENDING, 0L).intValue(),
+                counts.getOrDefault(PromotedMessageStatus.APPROVED, 0L).intValue(),
+                sumAmounts(active, PromotedMessageStatus.PENDING),
+                sumAmounts(active, PromotedMessageStatus.APPROVED),
+                currency);
+    }
+
+    @Override
+    @Transactional
+    public PromotionCancelOutcome cancelPromotionsForArchivedRoom(Long roomId) {
+        if (roomId == null) {
+            throw new IllegalArgumentException("Room ID cannot be null");
+        }
+
+        // Archiving is a platform decision, not a moderation one: the owner did
+        // nothing wrong, so APPROVED payments are refunded (the one cancel path
+        // that refunds) and PENDING holds are released.
+        List<PromotedMessage> active =
+                promotedMessageRepository.findByChatRoomIdAndStatusIn(roomId, ACTIVE_STATUSES);
+        int released = 0;
+        int refunded = 0;
+        double totalReturned = 0;
+        String currency = "USD";
+
+        for (PromotedMessage promotion : active) {
+            try {
+                boolean wasPending = promotion.getStatus() == PromotedMessageStatus.PENDING;
+                if (wasPending) {
+                    releaseHold(promotion);
+                } else {
+                    refundCapturedPayment(promotion);
+                }
+                resolve(promotion, PromotedMessageStatus.CANCELED, CanceledBy.ADMIN,
+                        wasPending
+                                ? "Chat room archived — pending promotion canceled and payment hold released."
+                                : "Chat room archived — promotion canceled and payment refunded.");
+                if (wasPending) {
+                    released++;
+                } else {
+                    refunded++;
+                }
+                totalReturned += promotion.getAmount() != null ? promotion.getAmount() : 0;
+                if (promotion.getCurrency() != null && !promotion.getCurrency().isBlank()) {
+                    currency = promotion.getCurrency();
+                }
+            } catch (Exception e) {
+                // One failed cancellation must not abort the others; the room
+                // has already been archived by the chat module.
+                log.error("Archive-cancel failed for promotion {} (room {}): {}",
+                        promotion.getId(), roomId, e.getMessage());
+            }
+        }
+
+        return new PromotionCancelOutcome(active.size(), released, refunded, totalReturned, currency);
+    }
+
+    @Override
     public Map<Long, ActivePromotion> getActivePromotions(Collection<Long> messageIds) {
         if (messageIds == null || messageIds.isEmpty()) {
             return Map.of();
@@ -519,6 +592,16 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
                     "Only PENDING or APPROVED promotions can be canceled. Current status: " + promotion.getStatus());
         }
         return resolve(promotion, PromotedMessageStatus.CANCELED, canceledBy, reason);
+    }
+
+    private void refundCapturedPayment(PromotedMessage promotion) throws StripeException {
+        PaymentReceipt receipt = promotion.getReceipt();
+        if (receipt != null && receipt.getStripePaymentIntentId() != null) {
+            paymentService.refundPayment(receipt.getStripePaymentIntentId());
+            receipt.setStatus("REFUNDED");
+        } else {
+            log.warn("No payment receipt found for promotion {}", promotion.getId());
+        }
     }
 
     private void releaseHold(PromotedMessage promotion) throws StripeException {

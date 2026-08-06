@@ -7,6 +7,7 @@ import com.mk3.chatapp.dtos.responses.AdminConversationDTO;
 import com.mk3.chatapp.dtos.responses.AuditLogDTO;
 import com.mk3.chatapp.dtos.responses.MessagePageDTO;
 import com.mk3.chatapp.dtos.responses.MessageResponseDTO;
+import com.mk3.chatapp.dtos.responses.RoomPromotionsSummaryDTO;
 import com.mk3.chatapp.dtos.responses.UserAdminViewDTO;
 import com.mk3.chatapp.dtos.responses.UserDTO;
 import com.mk3.chatapp.services.AdminConversationService;
@@ -159,5 +160,10 @@ public class AdminController {
     public ResponseEntity<Void> unarchiveChatRoom(@PathVariable Long roomId) {
         adminFacadeService.unarchiveChatRoom(roomId);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/chat-rooms/{roomId}/promotions-summary")
+    public ResponseEntity<RoomPromotionsSummaryDTO> getRoomPromotionsSummary(@PathVariable Long roomId) {
+        return ResponseEntity.ok(adminFacadeService.getRoomPromotionsSummary(roomId));
     }
 }

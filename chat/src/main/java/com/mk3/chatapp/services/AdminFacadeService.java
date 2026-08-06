@@ -5,6 +5,7 @@ import com.mk3.chatapp.dtos.WarnUserRequestDTO;
 import com.mk3.chatapp.dtos.requests.*;
 import com.mk3.chatapp.dtos.responses.AuditLogDTO;
 import com.mk3.chatapp.dtos.responses.MessageResponseDTO;
+import com.mk3.chatapp.dtos.responses.RoomPromotionsSummaryDTO;
 import com.mk3.chatapp.dtos.responses.UserAdminViewDTO;
 import com.mk3.chatapp.dtos.responses.UserDTO;
 import com.mk3.chatapp.models.AuditLog;
@@ -34,6 +35,8 @@ public interface AdminFacadeService {
     void archiveChatRoom(Long roomId);
 
     void unarchiveChatRoom(Long roomId);
+
+    RoomPromotionsSummaryDTO getRoomPromotionsSummary(Long roomId);
 
     void requireIdVerification(Long userId, Long reportCaseId);
 

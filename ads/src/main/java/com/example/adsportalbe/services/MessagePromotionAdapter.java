@@ -61,4 +61,28 @@ public class MessagePromotionAdapter implements MessagePromotionPort {
                 outcome.totalReturned(),
                 outcome.currency());
     }
+
+    @Override
+    public RoomPromotionsSummary getRoomPromotionsSummary(Long roomId) {
+        PromotedMessageService.RoomPromotionsSummary summary =
+                promotedMessageService.getRoomPromotionsSummary(roomId);
+        return new RoomPromotionsSummary(
+                summary.pendingCount(),
+                summary.approvedCount(),
+                summary.pendingReleaseTotal(),
+                summary.approvedRefundTotal(),
+                summary.currency());
+    }
+
+    @Override
+    public PromotionBanOutcome cancelActivePromotionsForRoom(Long roomId) {
+        PromotedMessageService.PromotionCancelOutcome outcome =
+                promotedMessageService.cancelPromotionsForArchivedRoom(roomId);
+        return new PromotionBanOutcome(
+                outcome.attempted(),
+                outcome.released(),
+                outcome.refunded(),
+                outcome.totalReturned(),
+                outcome.currency());
+    }
 }

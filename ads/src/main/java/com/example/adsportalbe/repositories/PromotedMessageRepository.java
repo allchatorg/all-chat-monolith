@@ -29,6 +29,8 @@ public interface PromotedMessageRepository
 
     List<PromotedMessage> findByOwner_IdAndStatusIn(Long ownerId, Collection<PromotedMessageStatus> statuses);
 
+    List<PromotedMessage> findByChatRoomIdAndStatusIn(Long chatRoomId, Collection<PromotedMessageStatus> statuses);
+
     List<PromotedMessage> findByOwner_Id(Long ownerId);
 
     Page<PromotedMessage> findByOwner_Id(Long ownerId, Pageable pageable);
