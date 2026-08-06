@@ -120,7 +120,7 @@ public class UserController {
     public ResponseEntity<Void> deleteAccount(@RequestBody DeleteAccountRequest deleteAccountRequest,
                                               Principal connectedUser) {
         User user = userService.getPrincipal(connectedUser);
-        userService.deleteAccount(user, deleteAccountRequest);
+        userService.deleteOwnAccount(user, deleteAccountRequest);
         return ResponseEntity.noContent().build();
     }
 
