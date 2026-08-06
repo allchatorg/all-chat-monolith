@@ -5,6 +5,7 @@ import com.mk3.chatapp.dtos.WarnUserRequestDTO;
 import com.mk3.chatapp.dtos.requests.*;
 import com.mk3.chatapp.dtos.responses.*;
 import com.mk3.chatapp.enums.BanType;
+import com.mk3.chatapp.enums.NotificationType;
 import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.enums.WebSocketMessageType;
 import com.mk3.chatapp.mappers.AuditLogCustomMapper;
@@ -46,6 +47,7 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
     private final ChatRoomService chatRoomService;
     private final RoomActivityService roomActivityService;
     private final IdVerificationService idVerificationService;
+    private final NotificationService notificationService;
 
     private final UserMapper userMapper;
     private final AuditLogCustomMapper auditLogCustomMapper;
@@ -116,9 +118,8 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
     @Override
     public AuditLog warnUser(WarnUserRequestDTO warnRequestDTO) {
         User targetUser = userService.findById(warnRequestDTO.userId());
-        WarnUserResponseDTO warnResponse = new WarnUserResponseDTO(warnRequestDTO.description());
-        webSocketBroadcastService.broadcastToUser(targetUser.getId(),
-                new WebSocketMessage(WebSocketMessageType.WARN_USER, null, warnResponse));
+        notificationService.createAndSend(targetUser, NotificationType.WARNING,
+                "You received a warning", warnRequestDTO.description(), null, null, null);
         return auditLogService.logWarning("WARN_USER", warnRequestDTO.description(), targetUser.getId());
     }
 

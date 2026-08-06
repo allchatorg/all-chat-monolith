@@ -153,6 +153,7 @@ rate-limit:
     admin-per-hour: 600
     private-chats-per-hour: 1200
     ban-appeals-per-hour: 60
+    notifications-per-hour: 600
 
 logging:
   level:

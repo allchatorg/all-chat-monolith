@@ -57,5 +57,6 @@ public class RateLimitProperties {
         private long adminPerHour = 600;
         private long privateChatsPerHour = 1_200;
         private long banAppealsPerHour = 300;
+        private long notificationsPerHour = 600;
     }
 }

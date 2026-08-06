@@ -171,6 +171,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 rule("admin_controller", ALL_METHODS, "/api/v1/admin/**", RateLimitScope.USER_OR_IP, ONE_HOUR,
                         controllers.getAdminPerHour(), null,
                         "Too many admin requests. Please try again later."),
+                rule("notifications_controller", ALL_METHODS, "/api/v1/notifications/**", RateLimitScope.USER_OR_IP, ONE_HOUR,
+                        controllers.getNotificationsPerHour(), null,
+                        "Too many notification requests. Please try again later."),
 
                 // Safety fallback for future /api/v1 controllers
                 rule("api_fallback", ALL_METHODS, "/api/v1/**", RateLimitScope.USER_OR_IP, ONE_HOUR,
