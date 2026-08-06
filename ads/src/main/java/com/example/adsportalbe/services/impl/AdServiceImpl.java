@@ -17,7 +17,9 @@ import com.example.adsportalbe.services.MailService;
 import com.example.adsportalbe.services.PaymentService;
 import com.example.adsportalbe.specifications.AdSpecification;
 import com.example.adsportalbe.utils.Utils;
+import com.mk3.chatapp.enums.NotificationType;
 import com.mk3.chatapp.models.identity.User;
+import com.mk3.chatapp.services.NotificationService;
 import com.mk3.chatapp.utils.MessageMarkers;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +58,7 @@ public class AdServiceImpl implements AdService {
     private final MailService mailService;
     private final AdCacheService adCacheService;
     private final AdMapper adMapper;
+    private final NotificationService notificationService;
 
     private static double refundableAmount(Ad ad) {
         if (ad.getReceipt().getAmountPaid() != null) {
@@ -398,7 +401,11 @@ public class AdServiceImpl implements AdService {
             // Don't throw - rejection should still succeed even if email fails
         }
 
-        // 9. Return the rejected ad as AdDetailedViewDto
+        // 9. Persistent in-app notification for the ad owner
+        notificationService.createAndSend(ad.getOwner(), NotificationType.AD_REJECTED, "Your ad was rejected",
+                "Your ad \"" + ad.getTitle() + "\" was rejected. Reason: " + rejectionReason, null, "AD", ad.getId());
+
+        // 10. Return the rejected ad as AdDetailedViewDto
         return adMapper.toDetailedDto(savedAd);
     }
 
@@ -456,7 +463,11 @@ public class AdServiceImpl implements AdService {
             // Don't throw - approval should still succeed even if email fails
         }
 
-        // 10. Return the approved ad as AdDetailedViewDto
+        // 10. Persistent in-app notification for the ad owner
+        notificationService.createAndSend(ad.getOwner(), NotificationType.AD_APPROVED, "Your ad was approved",
+                "Your ad \"" + ad.getTitle() + "\" has been approved and is now live.", null, "AD", ad.getId());
+
+        // 11. Return the approved ad as AdDetailedViewDto
         return adMapper.toDetailedDto(savedAd);
     }
 

@@ -5,6 +5,7 @@ import com.mk3.chatapp.dtos.WarnUserRequestDTO;
 import com.mk3.chatapp.dtos.requests.*;
 import com.mk3.chatapp.dtos.responses.*;
 import com.mk3.chatapp.enums.BanType;
+import com.mk3.chatapp.enums.NotificationType;
 import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.enums.WebSocketMessageType;
 import com.mk3.chatapp.mappers.AuditLogCustomMapper;
@@ -46,6 +47,7 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
     private final ChatRoomService chatRoomService;
     private final RoomActivityService roomActivityService;
     private final IdVerificationService idVerificationService;
+    private final NotificationService notificationService;
 
     private final UserMapper userMapper;
     private final AuditLogCustomMapper auditLogCustomMapper;
@@ -116,9 +118,8 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
     @Override
     public AuditLog warnUser(WarnUserRequestDTO warnRequestDTO) {
         User targetUser = userService.findById(warnRequestDTO.userId());
-        WarnUserResponseDTO warnResponse = new WarnUserResponseDTO(warnRequestDTO.description());
-        webSocketBroadcastService.broadcastToUser(targetUser.getId(),
-                new WebSocketMessage(WebSocketMessageType.WARN_USER, null, warnResponse));
+        notificationService.createAndSend(targetUser, NotificationType.WARNING,
+                "You received a warning", warnRequestDTO.description(), null, null, null);
         return auditLogService.logWarning("WARN_USER", warnRequestDTO.description(), targetUser.getId());
     }
 
@@ -203,6 +204,20 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
                 new WebSocketMessage(WebSocketMessageType.CHATROOM_ARCHIVED, chatRoom.getName(),
                         buildChatRoomStatusPayload(chatRoom.getId(), chatRoom.getName(), true)));
         auditLogService.logArchiveChatRoom("ARCHIVE_CHATROOM", "Archived chat room: " + chatRoom.getName(), roomId, chatRoom.getName());
+
+        // Runs after the archive is committed — a payment-provider failure must
+        // never fail or roll back the archive itself.
+        try {
+            var promotionResult = messagePromotionPort.cancelActivePromotionsForRoom(roomId);
+            if (promotionResult.attempted() > 0) {
+                log.info("Archive of room {}: canceled {}/{} active promotion(s) — {} pending hold(s) released, {} approved payment(s) refunded, total {} {}",
+                        roomId, promotionResult.released() + promotionResult.refunded(), promotionResult.attempted(),
+                        promotionResult.released(), promotionResult.refunded(),
+                        promotionResult.totalReturned(), promotionResult.currency());
+            }
+        } catch (Exception e) {
+            log.error("Failed to cancel promoted messages for archived room {}", roomId, e);
+        }
     }
 
     @Override
@@ -215,6 +230,18 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
                 new WebSocketMessage(WebSocketMessageType.CHATROOM_UNARCHIVED, chatRoom.getName(),
                         buildChatRoomStatusPayload(chatRoom.getId(), chatRoom.getName(), false)));
         auditLogService.logUnarchiveChatRoom("UNARCHIVE_CHATROOM", "Unarchived chat room: " + chatRoom.getName(), roomId, chatRoom.getName());
+    }
+
+    @Override
+    @PreAuthorize("@security.isAdmin()")
+    public RoomPromotionsSummaryDTO getRoomPromotionsSummary(Long roomId) {
+        var summary = messagePromotionPort.getRoomPromotionsSummary(roomId);
+        return new RoomPromotionsSummaryDTO(
+                summary.pendingCount(),
+                summary.approvedCount(),
+                summary.pendingReleaseTotal(),
+                summary.approvedRefundTotal(),
+                summary.currency());
     }
 
     private ChatRoomDTO buildChatRoomStatusPayload(Long chatRoomId, String chatRoomName, boolean archived) {

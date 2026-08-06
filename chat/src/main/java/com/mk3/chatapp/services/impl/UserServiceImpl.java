@@ -26,6 +26,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -461,6 +463,22 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     @Override
+    public void deleteOwnAccount(User user, DeleteAccountRequest deleteAccountRequest) {
+        if (user.getRole().isStaffMember()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Staff members cannot delete their account. Step down from your role first.");
+        }
+        // Guest/unclaimed accounts have no password, so only claimed accounts are challenged
+        if (user.getPassword() != null
+                && (deleteAccountRequest.password() == null
+                || !passwordEncoder.matches(deleteAccountRequest.password(), user.getPassword()))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Wrong password");
+        }
+        deleteAccount(user, deleteAccountRequest);
+    }
+
+    @Transactional
+    @Override
     public void deleteAccount(User user, DeleteAccountRequest deleteAccountRequest) {
         user.setDeleted(true);
         user.setEmail(null);
@@ -511,7 +529,7 @@ public class UserServiceImpl implements UserService {
     public void deleteStaleAccounts() {
         var users = userRepository.findStaleGuestAndUnclaimedUsers(STALE_ACCOUNT_DELETION_CUTOFF_TIME);
         for (User user : users) {
-            deleteAccount(user, new DeleteAccountRequest(false));
+            deleteAccount(user, new DeleteAccountRequest(false, null));
         }
     }
 

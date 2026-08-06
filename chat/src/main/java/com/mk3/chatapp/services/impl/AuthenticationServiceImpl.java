@@ -448,7 +448,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         // the session is expired in the deleteAccount method therefore the if statement
         if (user.getRole().equals(Role.UNCLAIMED_USER) || user.getRole().equals(Role.GUEST)) {
-            userService.deleteAccount(user, new DeleteAccountRequest(false));
+            userService.deleteAccount(user, new DeleteAccountRequest(false, null));
         } else {
             sessionManagementService.expireSessionById(sessionId);
         }

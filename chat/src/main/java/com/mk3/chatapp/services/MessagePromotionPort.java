@@ -48,7 +48,26 @@ public interface MessagePromotionPort {
      */
     PromotionBanOutcome cancelPromotionsForDeletedUserMessages(Long userId, java.time.Instant cutoff);
 
+    /**
+     * Counts and amounts of the room's active (PENDING or APPROVED)
+     * promotions — shown to the staff member before they archive the room.
+     */
+    RoomPromotionsSummary getRoomPromotionsSummary(Long roomId);
+
+    /**
+     * Cancels every active promotion in a room being archived. Archiving is a
+     * platform decision rather than a moderation one, so unlike the other
+     * cancel paths APPROVED payments ARE refunded; PENDING holds are released.
+     * Owners are notified. Per-item failures are caught and logged by the
+     * implementation so one failure never aborts the others.
+     */
+    PromotionBanOutcome cancelActivePromotionsForRoom(Long roomId);
+
     record PromotionInfo(Long id, String status) {
+    }
+
+    record RoomPromotionsSummary(int pendingCount, int approvedCount,
+                                 double pendingReleaseTotal, double approvedRefundTotal, String currency) {
     }
 
     record PromotionBanOutcome(int attempted, int released, int refunded, double totalReturned, String currency) {

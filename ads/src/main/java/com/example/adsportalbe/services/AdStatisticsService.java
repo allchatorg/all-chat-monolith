@@ -13,8 +13,10 @@ import com.example.adsportalbe.models.ad.AdDailyStatistics;
 import com.example.adsportalbe.models.ad.AdFormatType;
 import com.example.adsportalbe.models.ad.AdHyperlinkClick;
 import com.example.adsportalbe.models.ad.AdImpression;
+import com.mk3.chatapp.enums.NotificationType;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.services.FileUploadService;
+import com.mk3.chatapp.services.NotificationService;
 import com.mk3.chatapp.utils.MessageMarkers;
 import com.example.adsportalbe.repositories.AdClickRepository;
 import com.example.adsportalbe.repositories.AdDailyStatisticsRepository;
@@ -48,6 +50,7 @@ public class AdStatisticsService {
     private final AdCacheService adCacheService;
     private final AdImpressionCacheService adImpressionCacheService;
     private final FileUploadService fileUploadService;
+    private final NotificationService notificationService;
 
     @Transactional
     public void processImpressions(List<AdImpressionDto> impressionDtos) {
@@ -247,6 +250,11 @@ public class AdStatisticsService {
             ad.setStatus(AdStatus.COMPLETED);
             log.info("Ad {} reached completion threshold ({}/{}). Status updated to COMPLETED.",
                     ad.getId(), ad.getServedViews(), ad.getTotalViewsBought());
+            notificationService.createAndSend(ad.getOwner(), NotificationType.AD_COMPLETED,
+                    "Your ad campaign is complete",
+                    "Your ad \"" + ad.getTitle() + "\" has served all " + ad.getTotalViewsBought()
+                            + " purchased views.",
+                    null, "AD", ad.getId());
             return true;
         }
         return false;

@@ -17,12 +17,14 @@ import com.example.adsportalbe.utils.Utils;
 import com.mk3.chatapp.dtos.AttachmentDTO;
 import com.mk3.chatapp.dtos.responses.PromotedMessageEventDTO;
 import com.mk3.chatapp.enums.ChatRoomType;
+import com.mk3.chatapp.enums.NotificationType;
 import com.mk3.chatapp.mappers.AttachmentMapper;
 import com.mk3.chatapp.enums.WebSocketMessageType;
 import com.mk3.chatapp.models.Message;
 import com.mk3.chatapp.models.WebSocketMessage;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.repositories.MessageRepository;
+import com.mk3.chatapp.services.NotificationService;
 import com.mk3.chatapp.services.WebSocketBroadcastService;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +62,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     private final PaymentService paymentService;
     private final WebSocketBroadcastService webSocketBroadcastService;
     private final AttachmentMapper attachmentMapper;
+    private final NotificationService notificationService;
 
     private static void requireStatus(PromotedMessage promotion, PromotedMessageStatus expected, String action) {
         if (promotion.getStatus() != expected) {
@@ -254,6 +257,10 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         promotion.setApprovedAt(Instant.now());
         PromotedMessage saved = promotedMessageRepository.save(promotion);
         broadcastPromotionUpdate(saved);
+        notificationService.createAndSend(saved.getOwner(), NotificationType.PROMOTION_APPROVED,
+                "Your promoted message was approved",
+                "Your promoted message in " + saved.getChatRoomName() + " has been approved and is now live.",
+                null, "PROMOTED_MESSAGE", saved.getId());
         return toDetailDto(saved);
     }
 
@@ -477,6 +484,79 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     }
 
     @Override
+    public RoomPromotionsSummary getRoomPromotionsSummary(Long roomId) {
+        if (roomId == null) {
+            throw new IllegalArgumentException("Room ID cannot be null");
+        }
+
+        List<PromotedMessage> active =
+                promotedMessageRepository.findByChatRoomIdAndStatusIn(roomId, ACTIVE_STATUSES);
+        Map<PromotedMessageStatus, Long> counts = active.stream()
+                .collect(Collectors.groupingBy(PromotedMessage::getStatus, Collectors.counting()));
+        String currency = active.stream()
+                .map(PromotedMessage::getCurrency)
+                .filter(c -> c != null && !c.isBlank())
+                .findFirst()
+                .orElse("USD");
+
+        return new RoomPromotionsSummary(
+                counts.getOrDefault(PromotedMessageStatus.PENDING, 0L).intValue(),
+                counts.getOrDefault(PromotedMessageStatus.APPROVED, 0L).intValue(),
+                sumAmounts(active, PromotedMessageStatus.PENDING),
+                sumAmounts(active, PromotedMessageStatus.APPROVED),
+                currency);
+    }
+
+    @Override
+    @Transactional
+    public PromotionCancelOutcome cancelPromotionsForArchivedRoom(Long roomId) {
+        if (roomId == null) {
+            throw new IllegalArgumentException("Room ID cannot be null");
+        }
+
+        // Archiving is a platform decision, not a moderation one: the owner did
+        // nothing wrong, so APPROVED payments are refunded (the one cancel path
+        // that refunds) and PENDING holds are released.
+        List<PromotedMessage> active =
+                promotedMessageRepository.findByChatRoomIdAndStatusIn(roomId, ACTIVE_STATUSES);
+        int released = 0;
+        int refunded = 0;
+        double totalReturned = 0;
+        String currency = "USD";
+
+        for (PromotedMessage promotion : active) {
+            try {
+                boolean wasPending = promotion.getStatus() == PromotedMessageStatus.PENDING;
+                if (wasPending) {
+                    releaseHold(promotion);
+                } else {
+                    refundCapturedPayment(promotion);
+                }
+                resolve(promotion, PromotedMessageStatus.CANCELED, CanceledBy.ADMIN,
+                        wasPending
+                                ? "Chat room archived — pending promotion canceled and payment hold released."
+                                : "Chat room archived — promotion canceled and payment refunded.");
+                if (wasPending) {
+                    released++;
+                } else {
+                    refunded++;
+                }
+                totalReturned += promotion.getAmount() != null ? promotion.getAmount() : 0;
+                if (promotion.getCurrency() != null && !promotion.getCurrency().isBlank()) {
+                    currency = promotion.getCurrency();
+                }
+            } catch (Exception e) {
+                // One failed cancellation must not abort the others; the room
+                // has already been archived by the chat module.
+                log.error("Archive-cancel failed for promotion {} (room {}): {}",
+                        promotion.getId(), roomId, e.getMessage());
+            }
+        }
+
+        return new PromotionCancelOutcome(active.size(), released, refunded, totalReturned, currency);
+    }
+
+    @Override
     public Map<Long, ActivePromotion> getActivePromotions(Collection<Long> messageIds) {
         if (messageIds == null || messageIds.isEmpty()) {
             return Map.of();
@@ -514,6 +594,16 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         return resolve(promotion, PromotedMessageStatus.CANCELED, canceledBy, reason);
     }
 
+    private void refundCapturedPayment(PromotedMessage promotion) throws StripeException {
+        PaymentReceipt receipt = promotion.getReceipt();
+        if (receipt != null && receipt.getStripePaymentIntentId() != null) {
+            paymentService.refundPayment(receipt.getStripePaymentIntentId());
+            receipt.setStatus("REFUNDED");
+        } else {
+            log.warn("No payment receipt found for promotion {}", promotion.getId());
+        }
+    }
+
     private void releaseHold(PromotedMessage promotion) throws StripeException {
         PaymentReceipt receipt = promotion.getReceipt();
         if (receipt != null && receipt.getStripePaymentIntentId() != null) {
@@ -534,7 +624,28 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         promotion.setResolvedAt(Instant.now());
         PromotedMessage saved = promotedMessageRepository.save(promotion);
         broadcastPromotionUpdate(saved);
+        notifyOwnerOfResolution(saved, status, canceledBy, reason);
         return toDetailDto(saved);
+    }
+
+    /**
+     * Persistent owner notification for staff-driven resolutions: DENIED, and
+     * CANCELED only when staff initiated it. USER cancels are the owner's own
+     * action and SYSTEM_BAN owners cannot access notifications.
+     */
+    private void notifyOwnerOfResolution(PromotedMessage promotion, PromotedMessageStatus status,
+                                         CanceledBy canceledBy, String reason) {
+        if (status == PromotedMessageStatus.DENIED) {
+            notificationService.createAndSend(promotion.getOwner(), NotificationType.PROMOTION_DENIED,
+                    "Your promoted message was denied",
+                    "Your promoted message in " + promotion.getChatRoomName() + " was denied. Reason: " + reason,
+                    null, "PROMOTED_MESSAGE", promotion.getId());
+        } else if (status == PromotedMessageStatus.CANCELED && canceledBy == CanceledBy.ADMIN) {
+            notificationService.createAndSend(promotion.getOwner(), NotificationType.PROMOTION_CANCELED,
+                    "Your promoted message was canceled",
+                    "Your promoted message in " + promotion.getChatRoomName() + " was canceled by staff. Reason: " + reason,
+                    null, "PROMOTED_MESSAGE", promotion.getId());
+        }
     }
 
     private void broadcastPromotionUpdate(PromotedMessage promotion) {

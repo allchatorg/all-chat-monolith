@@ -1,6 +1,7 @@
 package com.mk3.chatapp.services.impl;
 
 import com.mk3.chatapp.dtos.responses.RoleUpdateNotificationDTO;
+import com.mk3.chatapp.enums.NotificationType;
 import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.enums.WebSocketMessageType;
 import com.mk3.chatapp.models.UserChatRoom;
@@ -23,6 +24,7 @@ public class RoleManagementServiceImpl implements RoleManagementService {
     private final UserChatRoomService userChatRoomService;
     private final ChatRoomService chatRoomService;
     private final RoomActivityService roomActivityService;
+    private final NotificationService notificationService;
 
     @Transactional
     @Override
@@ -43,6 +45,14 @@ public class RoleManagementServiceImpl implements RoleManagementService {
                 null,
                 roleUpdateNotificationDTO
         ));
+
+        // Persistent notification for new moderators
+        if (isPromotion && role == Role.MODERATOR) {
+            notificationService.createAndSend(user, NotificationType.MODERATOR_ACCEPTED,
+                    "You are now a moderator",
+                    "Congratulations! You have been promoted to Moderator. New chat rooms and moderation tools are now available to you.",
+                    null, null, null);
+        }
 
         syncUserChatRooms(role, user, previousUserChatRooms);
 

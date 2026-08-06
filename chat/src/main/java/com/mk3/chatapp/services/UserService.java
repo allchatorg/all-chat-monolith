@@ -70,6 +70,8 @@ public interface UserService extends UserDetailsService {
 
     void deleteAccount(User user, DeleteAccountRequest deleteAccountRequest);
 
+    void deleteOwnAccount(User user, DeleteAccountRequest deleteAccountRequest);
+
     Long incrementTotalUploadedFilesSize(Long size, User user);
 
     String updateUserDisplayColor(String color);
