@@ -17,12 +17,14 @@ import com.example.adsportalbe.utils.Utils;
 import com.mk3.chatapp.dtos.AttachmentDTO;
 import com.mk3.chatapp.dtos.responses.PromotedMessageEventDTO;
 import com.mk3.chatapp.enums.ChatRoomType;
+import com.mk3.chatapp.enums.NotificationType;
 import com.mk3.chatapp.mappers.AttachmentMapper;
 import com.mk3.chatapp.enums.WebSocketMessageType;
 import com.mk3.chatapp.models.Message;
 import com.mk3.chatapp.models.WebSocketMessage;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.repositories.MessageRepository;
+import com.mk3.chatapp.services.NotificationService;
 import com.mk3.chatapp.services.WebSocketBroadcastService;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +62,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     private final PaymentService paymentService;
     private final WebSocketBroadcastService webSocketBroadcastService;
     private final AttachmentMapper attachmentMapper;
+    private final NotificationService notificationService;
 
     private static void requireStatus(PromotedMessage promotion, PromotedMessageStatus expected, String action) {
         if (promotion.getStatus() != expected) {
@@ -254,6 +257,10 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         promotion.setApprovedAt(Instant.now());
         PromotedMessage saved = promotedMessageRepository.save(promotion);
         broadcastPromotionUpdate(saved);
+        notificationService.createAndSend(saved.getOwner(), NotificationType.PROMOTION_APPROVED,
+                "Your promoted message was approved",
+                "Your promoted message in " + saved.getChatRoomName() + " has been approved and is now live.",
+                null, "PROMOTED_MESSAGE", saved.getId());
         return toDetailDto(saved);
     }
 
@@ -534,7 +541,28 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         promotion.setResolvedAt(Instant.now());
         PromotedMessage saved = promotedMessageRepository.save(promotion);
         broadcastPromotionUpdate(saved);
+        notifyOwnerOfResolution(saved, status, canceledBy, reason);
         return toDetailDto(saved);
+    }
+
+    /**
+     * Persistent owner notification for staff-driven resolutions: DENIED, and
+     * CANCELED only when staff initiated it. USER cancels are the owner's own
+     * action and SYSTEM_BAN owners cannot access notifications.
+     */
+    private void notifyOwnerOfResolution(PromotedMessage promotion, PromotedMessageStatus status,
+                                         CanceledBy canceledBy, String reason) {
+        if (status == PromotedMessageStatus.DENIED) {
+            notificationService.createAndSend(promotion.getOwner(), NotificationType.PROMOTION_DENIED,
+                    "Your promoted message was denied",
+                    "Your promoted message in " + promotion.getChatRoomName() + " was denied. Reason: " + reason,
+                    null, "PROMOTED_MESSAGE", promotion.getId());
+        } else if (status == PromotedMessageStatus.CANCELED && canceledBy == CanceledBy.ADMIN) {
+            notificationService.createAndSend(promotion.getOwner(), NotificationType.PROMOTION_CANCELED,
+                    "Your promoted message was canceled",
+                    "Your promoted message in " + promotion.getChatRoomName() + " was canceled by staff. Reason: " + reason,
+                    null, "PROMOTED_MESSAGE", promotion.getId());
+        }
     }
 
     private void broadcastPromotionUpdate(PromotedMessage promotion) {
