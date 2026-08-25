@@ -4,6 +4,7 @@ import com.mk3.chatapp.dtos.responses.RoomPopulationDTO;
 import com.mk3.chatapp.dtos.responses.TopReactedMessageDTO;
 import com.mk3.chatapp.enums.ChatRoomNoiseLevelEnum;
 import com.mk3.chatapp.enums.RoomPopularitySort;
+import com.mk3.chatapp.enums.TopReactedPeriod;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -45,7 +46,7 @@ public interface RoomActivityService {
 
     void removeMessageReactions(Long roomId, Long messageId);
 
-    Page<TopReactedMessageDTO> getTopReactedMessages(Long roomId, int page, int pageSize);
+    Page<TopReactedMessageDTO> getTopReactedMessages(Long roomId, int page, int pageSize, TopReactedPeriod period);
 
     void markRoomAsArchived(String roomId);
 

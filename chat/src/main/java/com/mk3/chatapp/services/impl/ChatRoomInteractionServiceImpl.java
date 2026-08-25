@@ -370,9 +370,10 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
     }
 
     @Override
-    public Page<MessageResponseDTO> getTopReactedMessages(Long roomId, int page, int pageSize, Principal principal) {
+    public Page<MessageResponseDTO> getTopReactedMessages(Long roomId, int page, int pageSize,
+                                                          TopReactedPeriod period, Principal principal) {
         var user = userService.getPrincipal(principal);
-        var messagePage = roomActivityService.getTopReactedMessages(roomId, page, pageSize);
+        var messagePage = roomActivityService.getTopReactedMessages(roomId, page, pageSize, period);
 
         var messages = messagePage.getContent().stream().map(dto -> {
             try {

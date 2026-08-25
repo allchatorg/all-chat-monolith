@@ -8,6 +8,7 @@ import com.mk3.chatapp.dtos.responses.*;
 import com.mk3.chatapp.enums.ChatRoomNoiseLevelEnum;
 import com.mk3.chatapp.enums.ReactionType;
 import com.mk3.chatapp.enums.RoomPopularitySort;
+import com.mk3.chatapp.enums.TopReactedPeriod;
 import com.mk3.chatapp.models.identity.User;
 import org.springframework.data.domain.Page;
 
@@ -59,7 +60,7 @@ public interface ChatRoomInteractionService {
                                                    RoomPopularitySort popularitySort,
                                                    ChatRoomNoiseLevelEnum chatRoomNoiseLevel);
 
-    Page<MessageResponseDTO> getTopReactedMessages(Long roomId, int page, int pageSize, Principal principal);
+    Page<MessageResponseDTO> getTopReactedMessages(Long roomId, int page, int pageSize, TopReactedPeriod period, Principal principal);
 
     Page<MessageResponseDTO> getPromotedMessages(Long roomId, int page, int pageSize, Principal principal);
 }

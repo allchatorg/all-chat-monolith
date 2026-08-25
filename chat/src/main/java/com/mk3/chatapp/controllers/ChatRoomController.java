@@ -5,6 +5,7 @@ import com.mk3.chatapp.dtos.responses.*;
 import com.mk3.chatapp.enums.ChatRoomNoiseLevelEnum;
 import com.mk3.chatapp.enums.ReactionType;
 import com.mk3.chatapp.enums.RoomPopularitySort;
+import com.mk3.chatapp.enums.TopReactedPeriod;
 import com.mk3.chatapp.services.ChatRoomInteractionService;
 import com.mk3.chatapp.services.UserService;
 import jakarta.validation.Valid;
@@ -84,9 +85,10 @@ public class ChatRoomController {
     public ResponseEntity<Page<MessageResponseDTO>> getTopReactedMessages(@PathVariable Long roomId,
                                                                           @RequestParam(defaultValue = "0") int page,
                                                                           @RequestParam(defaultValue = "10") int pageSize,
+                                                                          @RequestParam(defaultValue = "ALL_TIME") TopReactedPeriod period,
                                                                           Principal connectedUser) {
         return ResponseEntity
-                .ok(chatRoomInteractionService.getTopReactedMessages(roomId, page, pageSize, connectedUser));
+                .ok(chatRoomInteractionService.getTopReactedMessages(roomId, page, pageSize, period, connectedUser));
     }
 
     @GetMapping("/{roomId}/messages/promoted")
