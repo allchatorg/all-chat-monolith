@@ -28,5 +28,6 @@ public record UserDTO(
         String displayColor,
         List<TagDTO> blurredContentTags,
         TimeFormat timeFormatSetting,
+        String timeZone,
         List<UserMinimalDTO> blockedUsers) {
 }

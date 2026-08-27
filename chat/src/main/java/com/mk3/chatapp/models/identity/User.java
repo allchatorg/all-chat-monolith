@@ -140,6 +140,10 @@ public class User extends Base implements UserDetails {
     @Column(name = "time_format_setting")
     private TimeFormat timeFormatSetting = TimeFormat.H24;
 
+    /** IANA zone id (e.g. "Europe/Zagreb") auto-detected by the browser; null until first sync. */
+    @Column(name = "time_zone", length = 64)
+    private String timeZone;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<UsernameHistory> usernameHistory = new ArrayList<>();
 

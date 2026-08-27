@@ -67,6 +67,15 @@ app:
       enabled: ${APP_VERIFICATION_TIERS_ENABLED:true}
 
 # --- ads-portal module config ---
+community-night:
+  reminder:
+    enabled: ${COMMUNITY_NIGHT_REMINDER_ENABLED:true}
+    day: THURSDAY
+    hour: 17
+    fallback-zone: UTC
+    title: "Community nights are this weekend!"
+    body: "Community nights are Friday and Saturday from 5 PM to midnight. See you there!"
+
 stripe:
   api-key: ${STRIPE_API_KEY}
   # --- chat module: Stripe Identity (ID/age verification) ---

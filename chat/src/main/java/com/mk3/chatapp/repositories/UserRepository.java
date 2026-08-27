@@ -39,6 +39,11 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
 
     boolean existsByPhoneNumber(String phoneNumber);
 
+    /** Users whose effective zone (stored, or the fallback when unset) is one of the given zones. */
+    @Query("SELECT u FROM User u WHERE u.deleted = false AND u.banned = false AND COALESCE(u.timeZone, :fallbackZone) IN :zones")
+    List<User> findActiveUsersInTimeZones(@Param("zones") java.util.Collection<String> zones,
+                                          @Param("fallbackZone") String fallbackZone);
+
     List<User> findByRoleIn(java.util.Collection<com.mk3.chatapp.enums.Role> roles);
 
     Optional<User> findByIdVerificationSessionId(String idVerificationSessionId);

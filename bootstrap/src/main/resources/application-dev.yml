@@ -62,6 +62,15 @@ app:
     tiers:
       enabled: ${APP_VERIFICATION_TIERS_ENABLED:false}
 
+community-night:
+  reminder:
+    enabled: ${COMMUNITY_NIGHT_REMINDER_ENABLED:true}
+    day: THURSDAY
+    hour: 17
+    fallback-zone: UTC
+    title: "Community nights are this weekend!"
+    body: "Community nights are Friday and Saturday from 5 PM to midnight. See you there!"
+
 stripe:
   api-key: ${STRIPE_API_KEY:sk_test_dummy}
   secret-key: ${STRIPE_SECRET_KEY:sk_test_dummy}

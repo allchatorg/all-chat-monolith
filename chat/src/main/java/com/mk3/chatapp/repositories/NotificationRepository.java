@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Set;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
@@ -23,4 +24,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying(clearAutomatically = true)
     @Query("update Notification n set n.readAt = :now where n.user.id = :userId and n.readAt is null and n.deleted = false")
     int markAllRead(@Param("userId") Long userId, @Param("now") Instant now);
+
+    @Query("select n.user.id from Notification n where n.type = :type and n.createdAt >= :since")
+    Set<Long> findUserIdsNotifiedSince(@Param("type") com.mk3.chatapp.enums.NotificationType type,
+                                       @Param("since") Instant since);
 }
