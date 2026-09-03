@@ -36,6 +36,7 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
     private final BanService banService;
     private final AdsModerationPort adsModerationPort;
     private final MessagePromotionPort messagePromotionPort;
+    private final RoomPromotionPort roomPromotionPort;
     private final UserService userService;
     private final SecurityService securityService;
     private final MessagesService messagesService;
@@ -83,6 +84,19 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
                 }
             } catch (Exception e) {
                 log.error("Failed to cancel promoted messages for banned user {}",
+                        banRequestDTO.userId(), e);
+            }
+
+            // Own try/catch — room promotions: pending holds released, approved captures kept.
+            try {
+                var roomPromotionResult = roomPromotionPort.cancelPromotionsForBannedUser(banRequestDTO.userId());
+                if (roomPromotionResult.attempted() > 0) {
+                    log.info("Permanent ban of user {}: released {}/{} pending room promotion hold(s), total {} {}",
+                            banRequestDTO.userId(), roomPromotionResult.released(), roomPromotionResult.attempted(),
+                            roomPromotionResult.totalReturned(), roomPromotionResult.currency());
+                }
+            } catch (Exception e) {
+                log.error("Failed to cancel room promotions for banned user {}",
                         banRequestDTO.userId(), e);
             }
         }
@@ -218,6 +232,21 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
         } catch (Exception e) {
             log.error("Failed to cancel promoted messages for archived room {}", roomId, e);
         }
+
+        // Own try/catch — the room's own promotions: pending holds released, approved payments
+        // refunded only when approved within the refund window, older ones canceled without refund.
+        try {
+            var roomPromotionResult = roomPromotionPort.cancelActivePromotionsForRoom(roomId);
+            if (roomPromotionResult.attempted() > 0) {
+                log.info("Archive of room {}: canceled {} room promotion(s) — {} pending hold(s) released, {} approved payment(s) refunded, {} canceled without refund (approved > {}h ago), total returned {} {}",
+                        roomId, roomPromotionResult.attempted(),
+                        roomPromotionResult.released(), roomPromotionResult.refunded(),
+                        roomPromotionResult.canceledWithoutRefund(), RoomPromotionPort.ARCHIVE_REFUND_WINDOW_HOURS,
+                        roomPromotionResult.totalReturned(), roomPromotionResult.currency());
+            }
+        } catch (Exception e) {
+            log.error("Failed to cancel room promotions for archived room {}", roomId, e);
+        }
     }
 
     @Override
@@ -236,12 +265,21 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
     @PreAuthorize("@security.isAdmin()")
     public RoomPromotionsSummaryDTO getRoomPromotionsSummary(Long roomId) {
         var summary = messagePromotionPort.getRoomPromotionsSummary(roomId);
+        var roomSummary = roomPromotionPort.getRoomPromotionsSummary(roomId);
         return new RoomPromotionsSummaryDTO(
                 summary.pendingCount(),
                 summary.approvedCount(),
                 summary.pendingReleaseTotal(),
                 summary.approvedRefundTotal(),
-                summary.currency());
+                summary.currency(),
+                roomSummary.pendingCount(),
+                roomSummary.approvedCount(),
+                roomSummary.pendingReleaseTotal(),
+                roomSummary.approvedRefundTotal(),
+                roomSummary.approvedRefundableCount(),
+                roomSummary.approvedNonRefundableCount(),
+                roomSummary.approvedNonRefundableTotal(),
+                RoomPromotionPort.ARCHIVE_REFUND_WINDOW_HOURS);
     }
 
     private ChatRoomDTO buildChatRoomStatusPayload(Long chatRoomId, String chatRoomName, boolean archived) {

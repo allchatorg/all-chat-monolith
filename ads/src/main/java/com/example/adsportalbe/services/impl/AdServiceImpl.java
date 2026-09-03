@@ -560,6 +560,8 @@ public class AdServiceImpl implements AdService {
                 paymentReceiptRepository.findMonthlyRevenueByType(currentYear, PurchaseType.AD));
         Map<Integer, Double> promotedRevenueByMonth = toMonthRevenueMap(
                 paymentReceiptRepository.findMonthlyRevenueByType(currentYear, PurchaseType.PROMOTED_MESSAGE));
+        Map<Integer, Double> roomPromotionRevenueByMonth = toMonthRevenueMap(
+                paymentReceiptRepository.findMonthlyRevenueByType(currentYear, PurchaseType.ROOM_PROMOTION));
 
         // Month abbreviations
         String[] monthNames = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -572,6 +574,7 @@ public class AdServiceImpl implements AdService {
                     .month(monthNames[i - 1])
                     .revenue(adRevenueByMonth.getOrDefault(i, 0.0))
                     .promotedRevenue(promotedRevenueByMonth.getOrDefault(i, 0.0))
+                    .roomPromotedRevenue(roomPromotionRevenueByMonth.getOrDefault(i, 0.0))
                     .build());
         }
 
@@ -597,6 +600,9 @@ public class AdServiceImpl implements AdService {
         Map<LocalDate, Double> promotedRevenueByDate = toDateRevenueMap(
                 paymentReceiptRepository.findDailyRevenueForDateRangeByType(startInstant, endInstant,
                         PurchaseType.PROMOTED_MESSAGE));
+        Map<LocalDate, Double> roomPromotionRevenueByDate = toDateRevenueMap(
+                paymentReceiptRepository.findDailyRevenueForDateRangeByType(startInstant, endInstant,
+                        PurchaseType.ROOM_PROMOTION));
 
         // Day abbreviations in order (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
         String[] dayNames = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
@@ -611,6 +617,7 @@ public class AdServiceImpl implements AdService {
                     .day(dayNames[dayOfWeek - 1])
                     .revenue(adRevenueByDate.getOrDefault(date, 0.0))
                     .promotedRevenue(promotedRevenueByDate.getOrDefault(date, 0.0))
+                    .roomPromotedRevenue(roomPromotionRevenueByDate.getOrDefault(date, 0.0))
                     .build());
         }
 

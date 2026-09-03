@@ -42,6 +42,9 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
     private final PrivateChatService privateChatService;
     private final MessagePromotionPort messagePromotionPort;
     private final MessagePromotionEnrichmentService messagePromotionEnrichmentService;
+    private final RoomPromotionPort roomPromotionPort;
+
+    private static final int MAX_PROMOTED_ROOM_PAGES = 25;
 
     @Override
     @Transactional
@@ -409,6 +412,22 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
 
         return new org.springframework.data.domain.PageImpl<>(messages, idPage.getPageable(),
                 idPage.getTotalElements());
+    }
+
+    @Override
+    public Page<PromotedRoomDTO> getPromotedRooms(int page, int pageSize) {
+        // Promotions never expire, so the list is capped at 25 pages: clamp the
+        // index and the reported total so the client never asks for page 26.
+        int safePage = Math.max(0, Math.min(page, MAX_PROMOTED_ROOM_PAGES - 1));
+        int safeSize = pageSize <= 0 ? 8 : Math.min(pageSize, 100);
+        var rowPage = roomPromotionPort.getPromotedRooms(safePage, safeSize);
+        var rows = rowPage.getContent().stream()
+                .map(r -> PromotedRoomDTO.from(roomActivityService.getRoomPopulation(r.roomId().toString()),
+                        r.promotedAt()))
+                .toList();
+        long cappedTotal = Math.min(rowPage.getTotalElements(), (long) MAX_PROMOTED_ROOM_PAGES * safeSize);
+        return new org.springframework.data.domain.PageImpl<>(rows,
+                org.springframework.data.domain.PageRequest.of(safePage, safeSize), cappedTotal);
     }
 
     private Integer getMissedMessagesCount(Long chatRoomId, Long userId) {

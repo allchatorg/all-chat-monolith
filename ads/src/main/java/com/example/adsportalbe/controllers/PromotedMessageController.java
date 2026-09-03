@@ -34,6 +34,9 @@ public class PromotedMessageController {
         if (!user.isClaimed()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account must be claimed to promote a message");
         }
+        if (user.getRole().isStaffMember()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Staff members cannot promote messages");
+        }
 
         PromotedMessageDetailDto result = promotedMessageService.promoteMessage(request, user);
         return ResponseEntity.status(HttpStatus.CREATED).body(result);

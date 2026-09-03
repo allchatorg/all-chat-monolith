@@ -152,6 +152,14 @@ public class ChatRoomController {
         return ResponseEntity.noContent().build();
     }
 
+    // Literal segment: matched before /{roomId}
+    @GetMapping("/promoted")
+    public ResponseEntity<Page<PromotedRoomDTO>> getPromotedRooms(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int pageSize) {
+        return ResponseEntity.ok(chatRoomInteractionService.getPromotedRooms(page, pageSize));
+    }
+
     @GetMapping("/chatroom-leaderboard")
     public ResponseEntity<Page<RoomPopulationDTO>> getTopActiveRooms(
             @RequestParam(defaultValue = "0") int page,

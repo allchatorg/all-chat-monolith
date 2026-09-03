@@ -99,6 +99,10 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         if (user == null || !user.isClaimed()) {
             throw new IllegalStateException("Account must be claimed to promote a message");
         }
+        // Staff members are excluded from the paid funnel (admins would approve their own purchases)
+        if (user.getRole() != null && user.getRole().isStaffMember()) {
+            throw new IllegalStateException("Staff members cannot promote messages");
+        }
         if (request.messageId() == null) {
             throw new IllegalArgumentException("Message ID cannot be null");
         }

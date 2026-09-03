@@ -63,4 +63,10 @@ public interface ChatRoomInteractionService {
     Page<MessageResponseDTO> getTopReactedMessages(Long roomId, int page, int pageSize, TopReactedPeriod period, Principal principal);
 
     Page<MessageResponseDTO> getPromotedMessages(Long roomId, int page, int pageSize, Principal principal);
+
+    /**
+     * Rooms with at least one approved room promotion, most recently approved
+     * first, enriched with live population stats. Serves at most 25 pages.
+     */
+    Page<PromotedRoomDTO> getPromotedRooms(int page, int pageSize);
 }

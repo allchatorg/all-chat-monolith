@@ -12,5 +12,6 @@ import lombok.NoArgsConstructor;
 public class MonthlyRevenueDto {
     private String month;
     private Double revenue; // ad revenue only
-    private Double promotedRevenue;
+    private Double promotedRevenue; // message promotions only
+    private Double roomPromotedRevenue;
 }
