@@ -48,7 +48,6 @@ public class ReportManagerServiceImpl implements ReportManagerService {
     private final UserService userService;
     private final WebSocketBroadcastService webSocketBroadcastService;
     private final AttachmentService attachmentService;
-    private final BanService banService;
     private final NcmecReportAuditLogRepository ncmecReportAuditLogRepository;
 
     @Transactional
@@ -245,7 +244,7 @@ public class ReportManagerServiceImpl implements ReportManagerService {
                 reportCaseId);
 
         // Add the ban audit log to the report case
-        AuditLog banLog = banService.banUser(banRequestDTO, initiatingUser);
+        AuditLog banLog = adminFacadeService.banUser(banRequestDTO, initiatingUser);
         addLogToReportCase(reportCaseId, banLog);
 
         userService.quarantineUser(targetUser);

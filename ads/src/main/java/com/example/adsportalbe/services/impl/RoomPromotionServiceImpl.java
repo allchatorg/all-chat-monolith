@@ -307,7 +307,7 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
                 .collect(Collectors.groupingBy(RoomPromotion::getStatus, Collectors.counting()));
 
         double pendingReleaseTotal = sumAmounts(promotions, RoomPromotionStatus.PENDING);
-        double approvedRefundTotal = sumAmounts(promotions, RoomPromotionStatus.APPROVED);
+        double approvedCapturedTotal = sumAmounts(promotions, RoomPromotionStatus.APPROVED);
         String currency = promotions.stream()
                 .map(RoomPromotion::getCurrency)
                 .filter(c -> c != null && !c.isBlank())
@@ -321,7 +321,7 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
                 counts.getOrDefault(RoomPromotionStatus.DENIED, 0L),
                 counts.getOrDefault(RoomPromotionStatus.CANCELED, 0L),
                 pendingReleaseTotal,
-                approvedRefundTotal,
+                approvedCapturedTotal,
                 currency);
     }
 

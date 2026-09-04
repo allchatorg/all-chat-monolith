@@ -9,10 +9,13 @@ import com.mk3.chatapp.dtos.responses.RoomPromotionsSummaryDTO;
 import com.mk3.chatapp.dtos.responses.UserAdminViewDTO;
 import com.mk3.chatapp.dtos.responses.UserDTO;
 import com.mk3.chatapp.models.AuditLog;
+import com.mk3.chatapp.models.identity.User;
 import org.springframework.data.domain.Page;
 
 public interface AdminFacadeService {
     AuditLog banUser(BanRequestDTO banRequestDTO);
+
+    AuditLog banUser(BanRequestDTO banRequestDTO, User currentUser);
 
     void revokeBan(Long userId);
 

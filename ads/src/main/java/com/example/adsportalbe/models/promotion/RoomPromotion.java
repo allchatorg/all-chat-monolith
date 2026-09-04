@@ -13,8 +13,8 @@ import java.time.Instant;
 /**
  * A paid, admin-approved promotion of a public chat room (mirrors
  * {@link PromotedMessage}). Any claimed user may promote any public room;
- * approved promotions never expire and every new approval bumps the room to
- * the top of the promoted list.
+ * each approval bumps the room to the top of the promoted list. The public
+ * list is capped separately by the chat module.
  */
 @Entity
 @Table(name = "room_promotions", indexes = {

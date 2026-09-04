@@ -12,6 +12,6 @@ public record BanRoomPromotionsSummaryDto(
         long deniedCount,
         long canceledCount,
         double pendingReleaseTotal,
-        double approvedRefundTotal,
+        double approvedCapturedTotal,
         String currency) {
 }

@@ -13,18 +13,21 @@ import java.util.List;
 public interface PaymentReceiptRepository extends JpaRepository<PaymentReceipt, Long> {
 
     @Query("SELECT SUM(p.amountPaid) FROM PaymentReceipt p " +
-            "WHERE p.paidAt BETWEEN :start AND :end AND p.purchaseType = :purchaseType")
+            "WHERE p.paidAt BETWEEN :start AND :end AND p.purchaseType = :purchaseType " +
+            "AND p.status = 'CAPTURED'")
     Double sumAmountPaidByPaidAtBetweenAndType(Instant start, Instant end, PurchaseType purchaseType);
 
     @Query("SELECT MONTH(p.paidAt) as month, SUM(p.amountPaid) as revenue " +
             "FROM PaymentReceipt p " +
             "WHERE YEAR(p.paidAt) = :year AND p.purchaseType = :purchaseType " +
+            "AND p.status = 'CAPTURED' " +
             "GROUP BY MONTH(p.paidAt)")
     List<Object[]> findMonthlyRevenueByType(int year, PurchaseType purchaseType);
 
     @Query("SELECT DATE(p.paidAt) as date, SUM(p.amountPaid) as revenue " +
             "FROM PaymentReceipt p " +
             "WHERE p.paidAt BETWEEN :start AND :end AND p.purchaseType = :purchaseType " +
+            "AND p.status = 'CAPTURED' " +
             "GROUP BY DATE(p.paidAt)")
     List<Object[]> findDailyRevenueForDateRangeByType(Instant start, Instant end, PurchaseType purchaseType);
 

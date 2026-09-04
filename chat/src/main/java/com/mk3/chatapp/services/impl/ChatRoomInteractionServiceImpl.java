@@ -416,8 +416,9 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
 
     @Override
     public Page<PromotedRoomDTO> getPromotedRooms(int page, int pageSize) {
-        // Promotions never expire, so the list is capped at 25 pages: clamp the
-        // index and the reported total so the client never asks for page 26.
+        // Approved promotions stay eligible, but the public list is capped at
+        // 25 pages: clamp the index and reported total so the client never asks
+        // for page 26.
         int safePage = Math.max(0, Math.min(page, MAX_PROMOTED_ROOM_PAGES - 1));
         int safeSize = pageSize <= 0 ? 8 : Math.min(pageSize, 100);
         var rowPage = roomPromotionPort.getPromotedRooms(safePage, safeSize);

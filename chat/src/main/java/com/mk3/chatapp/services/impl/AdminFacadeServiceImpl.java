@@ -56,11 +56,18 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
     @Override
     @PreAuthorize("hasAnyAuthority(T(com.mk3.chatapp.enums.Permission).BAN_USERS.getPermission())")
     public AuditLog banUser(BanRequestDTO banRequestDTO) {
-        AuditLog auditLog = banService.banUser(banRequestDTO, securityService.getCurrentUser());
+        return banUser(banRequestDTO, securityService.getCurrentUser());
+    }
 
-        // The ban transaction is committed inside banService.banUser, so the
-        // refunds run after it — a payment-provider failure can never fail or
-        // roll back the ban.
+    @Override
+    @PreAuthorize("hasAnyAuthority(T(com.mk3.chatapp.enums.Permission).BAN_USERS.getPermission())")
+    public AuditLog banUser(BanRequestDTO banRequestDTO, User currentUser) {
+        AuditLog auditLog = banService.banUser(banRequestDTO, currentUser);
+        handlePermanentBanPurchaseCleanup(banRequestDTO);
+        return auditLog;
+    }
+
+    private void handlePermanentBanPurchaseCleanup(BanRequestDTO banRequestDTO) {
         if (banRequestDTO.banType() == BanType.PERMANENT) {
             try {
                 var result = adsModerationPort.refundPendingAdPurchases(banRequestDTO.userId());
@@ -100,7 +107,6 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
                         banRequestDTO.userId(), e);
             }
         }
-        return auditLog;
     }
 
     @Override
