@@ -14,6 +14,7 @@ import com.example.adsportalbe.repositories.PaymentReceiptRepository;
 import com.example.adsportalbe.repositories.RoomPromotionRepository;
 import com.example.adsportalbe.services.PaymentService;
 import com.example.adsportalbe.services.RoomPromotionService;
+import com.example.adsportalbe.services.PurchaseCommunicationService;
 import com.example.adsportalbe.specifications.RoomPromotionSpecification;
 import com.example.adsportalbe.utils.Utils;
 import com.mk3.chatapp.dtos.responses.RoomPromotionEventDTO;
@@ -24,7 +25,6 @@ import com.mk3.chatapp.models.ChatRoom;
 import com.mk3.chatapp.models.WebSocketMessage;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.services.ChatRoomService;
-import com.mk3.chatapp.services.NotificationService;
 import com.mk3.chatapp.services.WebSocketBroadcastService;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
@@ -66,7 +66,7 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
     private final PaymentReceiptRepository paymentReceiptRepository;
     private final PaymentService paymentService;
     private final WebSocketBroadcastService webSocketBroadcastService;
-    private final NotificationService notificationService;
+    private final PurchaseCommunicationService purchaseCommunicationService;
     private final ChatRoomService chatRoomService;
 
     private static void requireStatus(RoomPromotion promotion, RoomPromotionStatus expected, String action) {
@@ -106,7 +106,7 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = StripeException.class)
     public RoomPromotionDetailDto promoteRoom(PromoteRoomRequestDto request, User user) throws StripeException {
         // Only claimed accounts may promote rooms (mirror promoteMessage)
         if (user == null || !user.isClaimed()) {
@@ -171,6 +171,10 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
 
         RoomPromotion saved = roomPromotionRepository.save(promotion);
         broadcastRoomPromotionUpdate(saved);
+        notifyOwner(saved, NotificationType.ROOM_PROMOTION_SUBMITTED,
+                "Your room promotion was submitted",
+                "Your room promotion #" + saved.getId() + " for " + saved.getChatRoomName()
+                        + " has been submitted and is awaiting review.");
         return toDetailDto(saved);
     }
 
@@ -205,7 +209,7 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
     @Transactional
     public RoomPromotionDetailDto requestCancelByUser(Long id, String reason, User user) {
         requireReason(reason);
-        RoomPromotion promotion = findPromotion(id);
+        RoomPromotion promotion = findPromotionForUpdate(id);
         if (!promotion.getOwner().getId().equals(user.getId())) {
             throw new RuntimeException("Access denied: You can only cancel your own room promotions");
         }
@@ -217,7 +221,13 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
         promotion.setCancelRequested(true);
         promotion.setCancelRequestReason(reason);
         promotion.setCancelRequestedAt(Instant.now());
-        return toDetailDto(roomPromotionRepository.save(promotion));
+        RoomPromotion saved = roomPromotionRepository.save(promotion);
+        notifyOwner(saved, NotificationType.ROOM_PROMOTION_CANCEL_REQUESTED,
+                "Your cancellation request was received",
+                "Your cancellation request for room promotion #" + saved.getId() + " for "
+                        + saved.getChatRoomName() + " has been received. The purchase is still pending review"
+                        + " and has not been canceled. Your reason: " + reason);
+        return toDetailDto(saved);
     }
 
     @Override
@@ -240,9 +250,9 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = StripeException.class)
     public RoomPromotionDetailDto approve(Long id) throws StripeException {
-        RoomPromotion promotion = findPromotion(id);
+        RoomPromotion promotion = findPromotionForUpdate(id);
         requireStatus(promotion, RoomPromotionStatus.PENDING, "approved");
 
         PaymentReceipt receipt = promotion.getReceipt();
@@ -262,19 +272,18 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
         promotion.setApprovedAt(Instant.now());
         RoomPromotion saved = roomPromotionRepository.save(promotion);
         broadcastRoomPromotionUpdate(saved);
-        notificationService.createAndSend(saved.getOwner(), NotificationType.ROOM_PROMOTION_APPROVED,
+        notifyOwner(saved, NotificationType.ROOM_PROMOTION_APPROVED,
                 "Your room promotion was approved",
-                "Your promotion of " + saved.getChatRoomName()
-                        + " has been approved and the room is now listed in Promoted Rooms.",
-                null, "ROOM_PROMOTION", saved.getId());
+                "Your room promotion #" + saved.getId() + " for " + saved.getChatRoomName()
+                        + " has been approved and the room is now listed in Promoted Rooms.");
         return toDetailDto(saved);
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = StripeException.class)
     public RoomPromotionDetailDto deny(Long id, String reason) throws StripeException {
         requireReason(reason);
-        RoomPromotion promotion = findPromotion(id);
+        RoomPromotion promotion = findPromotionForUpdate(id);
         requireStatus(promotion, RoomPromotionStatus.PENDING, "denied");
 
         releaseHold(promotion);
@@ -282,10 +291,10 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = StripeException.class)
     public RoomPromotionDetailDto cancelByAdmin(Long id, String reason) throws StripeException {
         requireReason(reason);
-        RoomPromotion promotion = findPromotion(id);
+        RoomPromotion promotion = findPromotionForUpdate(id);
         // PENDING: hold released; APPROVED: promotion stopped, payment kept
         if (promotion.getStatus() == RoomPromotionStatus.PENDING) {
             releaseHold(promotion);
@@ -335,7 +344,7 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
         // Only PENDING holds are released on a permanent ban. APPROVED (captured)
         // promotions are NOT refunded and keep the room listed.
         List<RoomPromotion> pendingPromotions =
-                roomPromotionRepository.findByOwner_IdAndStatusIn(userId, List.of(RoomPromotionStatus.PENDING));
+                roomPromotionRepository.findByOwnerIdAndStatusInForUpdate(userId, List.of(RoomPromotionStatus.PENDING));
         int released = 0;
         double totalReturned = 0;
         String currency = "USD";
@@ -350,6 +359,8 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
                 promotion.setReason("Owner permanently banned — pending promotion canceled and payment hold released.");
                 roomPromotionRepository.save(promotion);
                 broadcastRoomPromotionUpdate(promotion);
+                notifyOwnerOfResolution(promotion, promotion.getStatus(), promotion.getCanceledBy(),
+                        promotion.getReason());
 
                 released++;
                 totalReturned += promotion.getAmount() != null ? promotion.getAmount() : 0;
@@ -381,7 +392,7 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
         // value and are canceled without a refund.
         Instant now = Instant.now();
         List<RoomPromotion> active =
-                roomPromotionRepository.findByChatRoom_IdAndStatusIn(roomId, ACTIVE_STATUSES);
+                roomPromotionRepository.findByChatRoomIdAndStatusInForUpdate(roomId, ACTIVE_STATUSES);
         int released = 0;
         int refunded = 0;
         int canceledWithoutRefund = 0;
@@ -398,7 +409,7 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
                     reason = "Chat room archived — pending promotion canceled and payment hold released.";
                 } else if (refundable) {
                     refundCapturedPayment(promotion);
-                    reason = "Chat room archived — promotion canceled and payment refunded (approved within the last "
+                    reason = "Chat room archived — promotion canceled and payment refund submitted (approved within the last "
                             + ARCHIVE_REFUND_WINDOW.toHours() + " hours).";
                 } else {
                     reason = "Chat room archived — promotion canceled. It was approved more than "
@@ -534,23 +545,30 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
                 .orElseThrow(() -> new IllegalArgumentException("Room promotion not found with id: " + id));
     }
 
+    private RoomPromotion findPromotionForUpdate(Long id) {
+        return roomPromotionRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new IllegalArgumentException("Room promotion not found with id: " + id));
+    }
+
     private void refundCapturedPayment(RoomPromotion promotion) throws StripeException {
         PaymentReceipt receipt = promotion.getReceipt();
-        if (receipt != null && receipt.getStripePaymentIntentId() != null) {
+        if (receipt != null && receipt.getStripePaymentIntentId() != null
+                && !receipt.getStripePaymentIntentId().isBlank()) {
             paymentService.refundPayment(receipt.getStripePaymentIntentId());
             receipt.setStatus("REFUNDED");
         } else {
-            log.warn("No payment receipt found for room promotion {}", promotion.getId());
+            throw new IllegalStateException("No payment receipt found for room promotion " + promotion.getId());
         }
     }
 
     private void releaseHold(RoomPromotion promotion) throws StripeException {
         PaymentReceipt receipt = promotion.getReceipt();
-        if (receipt != null && receipt.getStripePaymentIntentId() != null) {
+        if (receipt != null && receipt.getStripePaymentIntentId() != null
+                && !receipt.getStripePaymentIntentId().isBlank()) {
             paymentService.cancelPaymentAuthorization(receipt.getStripePaymentIntentId());
             receipt.setStatus("CANCELLED");
         } else {
-            log.warn("No payment receipt found for room promotion {}", promotion.getId());
+            throw new IllegalStateException("No payment receipt found for room promotion " + promotion.getId());
         }
     }
 
@@ -568,24 +586,27 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
         return toDetailDto(saved);
     }
 
-    /**
-     * Persistent owner notification for staff-driven resolutions: DENIED, and
-     * CANCELED only when staff initiated it. USER cancels are the owner's own
-     * action and SYSTEM_BAN owners cannot access notifications.
-     */
     private void notifyOwnerOfResolution(RoomPromotion promotion, RoomPromotionStatus status,
                                          CanceledBy canceledBy, String reason) {
         if (status == RoomPromotionStatus.DENIED) {
-            notificationService.createAndSend(promotion.getOwner(), NotificationType.ROOM_PROMOTION_DENIED,
+            notifyOwner(promotion, NotificationType.ROOM_PROMOTION_DENIED,
                     "Your room promotion was denied",
-                    "Your promotion of " + promotion.getChatRoomName() + " was denied. Reason: " + reason,
-                    null, "ROOM_PROMOTION", promotion.getId());
-        } else if (status == RoomPromotionStatus.CANCELED && canceledBy == CanceledBy.ADMIN) {
-            notificationService.createAndSend(promotion.getOwner(), NotificationType.ROOM_PROMOTION_CANCELED,
+                    "Your room promotion #" + promotion.getId() + " for " + promotion.getChatRoomName()
+                            + " was denied. Reason: " + reason);
+        } else if (status == RoomPromotionStatus.CANCELED) {
+            String actor = canceledBy == CanceledBy.USER ? "at your request"
+                    : canceledBy == CanceledBy.SYSTEM_BAN ? "automatically because of an account ban" : "by staff";
+            notifyOwner(promotion, NotificationType.ROOM_PROMOTION_CANCELED,
                     "Your room promotion was canceled",
-                    "Your promotion of " + promotion.getChatRoomName() + " was canceled by staff. Reason: " + reason,
-                    null, "ROOM_PROMOTION", promotion.getId());
+                    "Your room promotion #" + promotion.getId() + " for " + promotion.getChatRoomName()
+                            + " was canceled " + actor + "."
+                            + (reason == null || reason.isBlank() ? "" : " Reason: " + reason));
         }
+    }
+
+    private void notifyOwner(RoomPromotion promotion, NotificationType type, String title, String body) {
+        purchaseCommunicationService.notifyOwner(promotion.getOwner(), PurchaseType.ROOM_PROMOTION,
+                promotion.getId(), type, title, body, promotion.getReceipt());
     }
 
     private void broadcastRoomPromotionUpdate(RoomPromotion promotion) {

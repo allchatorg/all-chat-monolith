@@ -11,7 +11,5 @@ public interface MailService {
 
     void sendEmailUpdateVerification(String newEmail, String code);
 
-    void sendAdRejectionEmail(User user, String adTitle, String rejectionReason);
-
-    void sendAdApprovalEmail(User user, String adTitle);
+    void sendPurchaseUpdateEmail(String to, String title, String body, String purchaseReference, String detailsPath);
 }

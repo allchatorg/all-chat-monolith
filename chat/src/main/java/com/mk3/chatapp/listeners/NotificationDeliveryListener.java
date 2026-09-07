@@ -23,9 +23,17 @@ public class NotificationDeliveryListener {
 
     @TransactionalEventListener
     public void onNotificationCreated(NotificationCreatedEvent event) {
-        webSocketBroadcastService.broadcastToUser(event.userId(), WebSocketMessage.builder()
-                .type(WebSocketMessageType.NOTIFICATION)
-                .data(event.notification())
-                .build());
+        try {
+            webSocketBroadcastService.broadcastToUser(event.userId(), WebSocketMessage.builder()
+                    .type(WebSocketMessageType.NOTIFICATION)
+                    .data(event.notification())
+                    .build());
+        } catch (Exception e) {
+            // The purchase and notification have already committed. A broker
+            // outage must not turn that success into an apparent request failure;
+            // the notification remains available when the client reconnects.
+            log.error("Failed to push notification {} to user {}",
+                    event.notification().id(), event.userId(), e);
+        }
     }
 }

@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -78,28 +77,12 @@ public class ChatRoomServiceImpl implements ChatRoomService {
         }
 
         String query = name.trim().toLowerCase(Locale.ROOT);
-        List<ChatRoom> rooms;
         if (role != null && role.isStaffMember()) {
-            rooms = chatRoomRepository.findByNameContainingIgnoreCase(query).stream()
+            return chatRoomRepository.findByNameContainingIgnoreCase(query).stream()
                     .filter(chatRoom -> chatRoom.getRequiredAccessLevel().getLevel() <= role.getLevel())
                     .toList();
-        } else {
-            rooms = chatRoomRepository.findVisibleGuestChatRoomsByName(Role.GUEST, query);
         }
-
-        // Rank exact matches before prefixes and other substring matches.
-        return rooms.stream()
-                .sorted(Comparator.comparingInt((ChatRoom room) -> {
-                    String roomName = room.getName().trim().toLowerCase(Locale.ROOT);
-                    if (roomName.equals(query)) {
-                        return 0;
-                    }
-                    return roomName.startsWith(query) ? 1 : 2;
-                })
-                        .thenComparingInt(room -> room.getName().trim().length())
-                        .thenComparing(room -> room.getName().trim(), String.CASE_INSENSITIVE_ORDER)
-                        .thenComparing(ChatRoom::getId))
-                .toList();
+        return chatRoomRepository.findVisibleGuestChatRoomsByName(Role.GUEST, query);
     }
 
     @Override

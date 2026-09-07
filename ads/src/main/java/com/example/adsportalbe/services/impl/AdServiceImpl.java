@@ -13,13 +13,12 @@ import com.example.adsportalbe.repositories.AdRepository;
 import com.example.adsportalbe.repositories.PaymentReceiptRepository;
 import com.example.adsportalbe.services.AdCacheService;
 import com.example.adsportalbe.services.AdService;
-import com.example.adsportalbe.services.MailService;
+import com.example.adsportalbe.services.PurchaseCommunicationService;
 import com.example.adsportalbe.services.PaymentService;
 import com.example.adsportalbe.specifications.AdSpecification;
 import com.example.adsportalbe.utils.Utils;
 import com.mk3.chatapp.enums.NotificationType;
 import com.mk3.chatapp.models.identity.User;
-import com.mk3.chatapp.services.NotificationService;
 import com.mk3.chatapp.utils.MessageMarkers;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
@@ -55,10 +54,9 @@ public class AdServiceImpl implements AdService {
     private final PaymentReceiptRepository paymentReceiptRepository;
     private final AdFormatRepository adFormatRepository;
     private final PaymentService paymentService;
-    private final MailService mailService;
+    private final PurchaseCommunicationService purchaseCommunicationService;
     private final AdCacheService adCacheService;
     private final AdMapper adMapper;
-    private final NotificationService notificationService;
 
     private static double refundableAmount(Ad ad) {
         if (ad.getReceipt().getAmountPaid() != null) {
@@ -90,7 +88,7 @@ public class AdServiceImpl implements AdService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = StripeException.class)
     public Ad createAd(CreateAdRequestDto request, User user) throws StripeException {
         // 0. Only claimed accounts may create ads (defense-in-depth; the controller
         //    also rejects unclaimed/guest sessions with a 403).
@@ -191,7 +189,11 @@ public class AdServiceImpl implements AdService {
 
         ad.setReceipt(receipt);
 
-        return adRepository.save(ad);
+        Ad saved = adRepository.save(ad);
+        purchaseCommunicationService.notifyOwner(user, PurchaseType.AD, saved.getId(),
+                NotificationType.AD_SUBMITTED, "Your ad purchase was received",
+                "Your ad \"" + saved.getTitle() + "\" was submitted and is awaiting staff review.", receipt);
+        return saved;
     }
 
     private double calculateAdCost(AdFormat format, String text, int views) {
@@ -309,7 +311,7 @@ public class AdServiceImpl implements AdService {
             throw new IllegalArgumentException("User ID cannot be null");
         }
 
-        List<Ad> refundableAds = adRepository.findPendingRefundableAdsByOwnerId(userId);
+        List<Ad> refundableAds = adRepository.findPendingRefundableAdsForUpdate(userId);
         int refunded = 0;
         double totalRefunded = 0;
         String currency = "USD";
@@ -321,8 +323,11 @@ public class AdServiceImpl implements AdService {
 
                 receipt.setStatus("CANCELLED");
                 ad.setStatus(AdStatus.REJECTED);
-                ad.setRejectionReason("Owner permanently banned — payment authorization cancelled and refunded in full.");
+                ad.setRejectionReason("Owner permanently banned — pending ad canceled.");
                 adRepository.save(ad);
+                purchaseCommunicationService.notifyOwner(ad.getOwner(), PurchaseType.AD, ad.getId(),
+                        NotificationType.AD_CANCELED, "Your ad purchase was canceled",
+                        "Your ad \"" + ad.getTitle() + "\" was canceled. Reason: " + ad.getRejectionReason(), receipt);
 
                 refunded++;
                 totalRefunded += refundableAmount(ad);
@@ -356,10 +361,14 @@ public class AdServiceImpl implements AdService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = StripeException.class)
     public AdDetailedViewDto rejectAd(Long adId, String rejectionReason) throws StripeException {
+        if (rejectionReason == null || rejectionReason.isBlank()) {
+            throw new IllegalArgumentException("A rejection reason is required");
+        }
+        rejectionReason = rejectionReason.trim();
         // 1. Fetch ad by ID
-        Ad ad = adRepository.findById(adId)
+        Ad ad = adRepository.findByIdForUpdate(adId)
                 .orElseThrow(() -> new RuntimeException("Ad not found with id: " + adId));
 
         // 2. Validate ad is in PENDING status
@@ -376,7 +385,8 @@ public class AdServiceImpl implements AdService {
 
         // 5. Cancel payment authorization
         PaymentReceipt receipt = ad.getReceipt();
-        if (receipt != null && receipt.getStripePaymentIntentId() != null) {
+        if (receipt != null && receipt.getStripePaymentIntentId() != null
+                && !receipt.getStripePaymentIntentId().isBlank()) {
             try {
                 paymentService.cancelPaymentAuthorization(receipt.getStripePaymentIntentId());
 
@@ -387,33 +397,26 @@ public class AdServiceImpl implements AdService {
                 throw e;
             }
         } else {
-            log.warn("No payment receipt found for ad {}", adId);
+            throw new IllegalStateException("No payment receipt found for ad " + adId);
         }
 
         // 7. Save the ad
         Ad savedAd = adRepository.save(ad);
 
-        // 8. Send rejection email to ad owner
-        try {
-            mailService.sendAdRejectionEmail(ad.getOwner(), ad.getTitle(), rejectionReason);
-        } catch (Exception e) {
-            log.error("Failed to send rejection email for ad {}: {}", adId, e.getMessage());
-            // Don't throw - rejection should still succeed even if email fails
-        }
-
-        // 9. Persistent in-app notification for the ad owner
-        notificationService.createAndSend(ad.getOwner(), NotificationType.AD_REJECTED, "Your ad was rejected",
-                "Your ad \"" + ad.getTitle() + "\" was rejected. Reason: " + rejectionReason, null, "AD", ad.getId());
+        // Email and the persistent chat notification commit with this resolution.
+        purchaseCommunicationService.notifyOwner(ad.getOwner(), PurchaseType.AD, ad.getId(),
+                NotificationType.AD_REJECTED, "Your ad was rejected",
+                "Your ad \"" + ad.getTitle() + "\" was rejected. Reason: " + rejectionReason, receipt);
 
         // 10. Return the rejected ad as AdDetailedViewDto
         return adMapper.toDetailedDto(savedAd);
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = StripeException.class)
     public AdDetailedViewDto approveAd(Long adId) throws StripeException {
         // 1. Fetch ad by ID
-        Ad ad = adRepository.findById(adId)
+        Ad ad = adRepository.findByIdForUpdate(adId)
                 .orElseThrow(() -> new RuntimeException("Ad not found with id: " + adId));
 
         // 2. Validate ad is in PENDING status
@@ -455,17 +458,9 @@ public class AdServiceImpl implements AdService {
             log.error("Failed to cache ad {} during approval. It will be picked up by reconciliation.", adId, e);
         }
 
-        // 9. Send approval email to ad owner
-        try {
-            mailService.sendAdApprovalEmail(ad.getOwner(), ad.getTitle());
-        } catch (Exception e) {
-            log.error("Failed to send approval email for ad {}: {}", adId, e.getMessage());
-            // Don't throw - approval should still succeed even if email fails
-        }
-
-        // 10. Persistent in-app notification for the ad owner
-        notificationService.createAndSend(ad.getOwner(), NotificationType.AD_APPROVED, "Your ad was approved",
-                "Your ad \"" + ad.getTitle() + "\" has been approved and is now live.", null, "AD", ad.getId());
+        purchaseCommunicationService.notifyOwner(ad.getOwner(), PurchaseType.AD, ad.getId(),
+                NotificationType.AD_APPROVED, "Your ad was approved",
+                "Your ad \"" + ad.getTitle() + "\" has been approved and is now live.", receipt);
 
         // 11. Return the approved ad as AdDetailedViewDto
         return adMapper.toDetailedDto(savedAd);

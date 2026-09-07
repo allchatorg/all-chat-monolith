@@ -136,6 +136,10 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         PaymentIntent paymentIntent = PaymentIntent.create(paramsBuilder.build());
+        // Purchase confirmations must only describe a hold Stripe actually authorized.
+        if (!"requires_capture".equals(paymentIntent.getStatus())) {
+            throw new IllegalStateException("Payment authorization could not be completed. Please try another saved payment method.");
+        }
         return paymentIntent.getId();
     }
 
@@ -164,15 +168,23 @@ public class PaymentServiceImpl implements PaymentService {
 
         PaymentIntent paymentIntent = PaymentIntent.retrieve(paymentIntentId);
 
-        // Cancel the payment intent if it's cancelable
+        // A retry after a successful release is safe. Never report a release
+        // when Stripe still has a captured or processing payment.
+        if ("canceled".equals(paymentIntent.getStatus())) {
+            return;
+        }
         if ("requires_capture".equals(paymentIntent.getStatus()) ||
+                "requires_payment_method".equals(paymentIntent.getStatus()) ||
                 "requires_confirmation".equals(paymentIntent.getStatus()) ||
                 "requires_action".equals(paymentIntent.getStatus())) {
-            paymentIntent.cancel();
+            PaymentIntent canceled = paymentIntent.cancel();
+            if (!"canceled".equals(canceled.getStatus())) {
+                throw new IllegalStateException("Payment authorization release has not completed");
+            }
             log.info("Cancelled payment intent: {}", paymentIntentId);
         } else {
-            log.warn("Payment intent {} cannot be cancelled, current status: {}",
-                    paymentIntentId, paymentIntent.getStatus());
+            throw new IllegalStateException("Payment authorization cannot be released in its current state: "
+                    + paymentIntent.getStatus());
         }
     }
 
@@ -186,7 +198,10 @@ public class PaymentServiceImpl implements PaymentService {
 
         // Capture the payment if it's capturable
         if ("requires_capture".equals(paymentIntent.getStatus())) {
-            paymentIntent.capture();
+            PaymentIntent captured = paymentIntent.capture();
+            if (!"succeeded".equals(captured.getStatus())) {
+                throw new IllegalStateException("Payment capture has not completed");
+            }
             log.info("Captured payment intent: {}", paymentIntentId);
         } else {
             throw new IllegalStateException(
@@ -205,10 +220,13 @@ public class PaymentServiceImpl implements PaymentService {
 
         // Only captured payments can be refunded
         if ("succeeded".equals(paymentIntent.getStatus())) {
-            Refund.create(RefundCreateParams.builder()
+            Refund refund = Refund.create(RefundCreateParams.builder()
                     .setPaymentIntent(paymentIntentId)
                     .build());
-            log.info("Refunded payment intent: {}", paymentIntentId);
+            if ("failed".equals(refund.getStatus()) || "canceled".equals(refund.getStatus())) {
+                throw new IllegalStateException("The payment refund was not accepted");
+            }
+            log.info("Refund requested for payment intent: {}", paymentIntentId);
         } else {
             throw new IllegalStateException(
                     "Payment intent " + paymentIntentId + " cannot be refunded, current status: "

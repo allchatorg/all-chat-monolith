@@ -7,6 +7,7 @@ import com.example.adsportalbe.dto.ad.AdDailyStatsResponseDto;
 import com.example.adsportalbe.dto.ad.UserAdViewsDailyBreakdownDto;
 import com.example.adsportalbe.dto.ad.UserAdViewsSummaryDto;
 import com.example.adsportalbe.enums.AdStatus;
+import com.example.adsportalbe.enums.PurchaseType;
 import com.example.adsportalbe.models.ad.Ad;
 import com.example.adsportalbe.models.ad.AdClick;
 import com.example.adsportalbe.models.ad.AdDailyStatistics;
@@ -16,12 +17,12 @@ import com.example.adsportalbe.models.ad.AdImpression;
 import com.mk3.chatapp.enums.NotificationType;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.services.FileUploadService;
-import com.mk3.chatapp.services.NotificationService;
 import com.mk3.chatapp.utils.MessageMarkers;
 import com.example.adsportalbe.repositories.AdClickRepository;
 import com.example.adsportalbe.repositories.AdDailyStatisticsRepository;
 import com.example.adsportalbe.repositories.AdHyperlinkClickRepository;
 import com.example.adsportalbe.repositories.AdImpressionRepository;
+import com.example.adsportalbe.repositories.AdRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,7 @@ public class AdStatisticsService {
     private static final int MAX_LINK_URL_LENGTH = 1024;
 
     private final AdService adService;
+    private final AdRepository adRepository;
     private final AdImpressionRepository adImpressionRepository;
     private final AdClickRepository adClickRepository;
     private final AdDailyStatisticsRepository adDailyStatisticsRepository;
@@ -50,7 +52,7 @@ public class AdStatisticsService {
     private final AdCacheService adCacheService;
     private final AdImpressionCacheService adImpressionCacheService;
     private final FileUploadService fileUploadService;
-    private final NotificationService notificationService;
+    private final PurchaseCommunicationService purchaseCommunicationService;
 
     @Transactional
     public void processImpressions(List<AdImpressionDto> impressionDtos) {
@@ -118,7 +120,7 @@ public class AdStatisticsService {
         log.info("Processing {} impressions for ad ID: {}", impressionDtos.size(), adId);
 
         // Fetch the ad
-        List<Ad> ads = adService.findAllById(List.of(adId));
+        List<Ad> ads = adRepository.findAllByIdForUpdate(List.of(adId));
         if (ads.isEmpty()) {
             log.error("Ad not found with ID: {}", adId);
             adCacheService.removeAd(adId);
@@ -169,7 +171,7 @@ public class AdStatisticsService {
     }
 
     private Map<Long, Ad> fetchAdsAsMap(Set<Long> adIds) {
-        return adService.findAllById(adIds).stream()
+        return adRepository.findAllByIdForUpdate(adIds).stream()
                 .collect(Collectors.toMap(Ad::getId, ad -> ad));
     }
 
@@ -250,11 +252,11 @@ public class AdStatisticsService {
             ad.setStatus(AdStatus.COMPLETED);
             log.info("Ad {} reached completion threshold ({}/{}). Status updated to COMPLETED.",
                     ad.getId(), ad.getServedViews(), ad.getTotalViewsBought());
-            notificationService.createAndSend(ad.getOwner(), NotificationType.AD_COMPLETED,
+            purchaseCommunicationService.notifyOwner(ad.getOwner(), PurchaseType.AD, ad.getId(), NotificationType.AD_COMPLETED,
                     "Your ad campaign is complete",
                     "Your ad \"" + ad.getTitle() + "\" has served all " + ad.getTotalViewsBought()
                             + " purchased views.",
-                    null, "AD", ad.getId());
+                    ad.getReceipt());
             return true;
         }
         return false;

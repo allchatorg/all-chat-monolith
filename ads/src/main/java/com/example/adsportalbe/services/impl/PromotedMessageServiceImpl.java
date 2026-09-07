@@ -12,6 +12,7 @@ import com.example.adsportalbe.repositories.PaymentReceiptRepository;
 import com.example.adsportalbe.repositories.PromotedMessageRepository;
 import com.example.adsportalbe.services.PaymentService;
 import com.example.adsportalbe.services.PromotedMessageService;
+import com.example.adsportalbe.services.PurchaseCommunicationService;
 import com.example.adsportalbe.specifications.PromotedMessageSpecification;
 import com.example.adsportalbe.utils.Utils;
 import com.mk3.chatapp.dtos.AttachmentDTO;
@@ -24,7 +25,6 @@ import com.mk3.chatapp.models.Message;
 import com.mk3.chatapp.models.WebSocketMessage;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.repositories.MessageRepository;
-import com.mk3.chatapp.services.NotificationService;
 import com.mk3.chatapp.services.WebSocketBroadcastService;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
@@ -62,7 +62,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     private final PaymentService paymentService;
     private final WebSocketBroadcastService webSocketBroadcastService;
     private final AttachmentMapper attachmentMapper;
-    private final NotificationService notificationService;
+    private final PurchaseCommunicationService purchaseCommunicationService;
 
     private static void requireStatus(PromotedMessage promotion, PromotedMessageStatus expected, String action) {
         if (promotion.getStatus() != expected) {
@@ -92,7 +92,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = StripeException.class)
     public PromotedMessageDetailDto promoteMessage(PromoteMessageRequestDto request, User user)
             throws StripeException {
         // Only claimed accounts may promote messages (mirror createAd)
@@ -156,6 +156,10 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
 
         PromotedMessage saved = promotedMessageRepository.save(promotion);
         broadcastPromotionUpdate(saved);
+        notifyOwner(saved, NotificationType.PROMOTION_SUBMITTED,
+                "Your promoted message was submitted",
+                "Your promoted message #" + saved.getId() + " in " + saved.getChatRoomName()
+                        + " has been submitted and is awaiting review.");
         return toDetailDto(saved);
     }
 
@@ -180,9 +184,9 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = StripeException.class)
     public PromotedMessageDetailDto cancelByUser(Long id, User user) throws StripeException {
-        PromotedMessage promotion = findPromotion(id);
+        PromotedMessage promotion = findPromotionForUpdate(id);
         if (!promotion.getOwner().getId().equals(user.getId())) {
             throw new RuntimeException("Access denied: You can only cancel your own promoted messages");
         }
@@ -204,7 +208,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     @Transactional
     public PromotedMessageDetailDto requestCancelByUser(Long id, String reason, User user) {
         requireReason(reason);
-        PromotedMessage promotion = findPromotion(id);
+        PromotedMessage promotion = findPromotionForUpdate(id);
         if (!promotion.getOwner().getId().equals(user.getId())) {
             throw new RuntimeException("Access denied: You can only cancel your own promoted messages");
         }
@@ -216,7 +220,13 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         promotion.setCancelRequested(true);
         promotion.setCancelRequestReason(reason);
         promotion.setCancelRequestedAt(Instant.now());
-        return toDetailDto(promotedMessageRepository.save(promotion));
+        PromotedMessage saved = promotedMessageRepository.save(promotion);
+        notifyOwner(saved, NotificationType.PROMOTION_CANCEL_REQUESTED,
+                "Your cancellation request was received",
+                "Your cancellation request for promoted message #" + saved.getId() + " in "
+                        + saved.getChatRoomName() + " has been received. The purchase is still pending review"
+                        + " and has not been canceled. Your reason: " + reason);
+        return toDetailDto(saved);
     }
 
     @Override
@@ -239,9 +249,9 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = StripeException.class)
     public PromotedMessageDetailDto approve(Long id) throws StripeException {
-        PromotedMessage promotion = findPromotion(id);
+        PromotedMessage promotion = findPromotionForUpdate(id);
         requireStatus(promotion, PromotedMessageStatus.PENDING, "approved");
 
         PaymentReceipt receipt = promotion.getReceipt();
@@ -261,18 +271,18 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         promotion.setApprovedAt(Instant.now());
         PromotedMessage saved = promotedMessageRepository.save(promotion);
         broadcastPromotionUpdate(saved);
-        notificationService.createAndSend(saved.getOwner(), NotificationType.PROMOTION_APPROVED,
+        notifyOwner(saved, NotificationType.PROMOTION_APPROVED,
                 "Your promoted message was approved",
-                "Your promoted message in " + saved.getChatRoomName() + " has been approved and is now live.",
-                null, "PROMOTED_MESSAGE", saved.getId());
+                "Your promoted message #" + saved.getId() + " in " + saved.getChatRoomName()
+                        + " has been approved and is now live.");
         return toDetailDto(saved);
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = StripeException.class)
     public PromotedMessageDetailDto deny(Long id, String reason) throws StripeException {
         requireReason(reason);
-        PromotedMessage promotion = findPromotion(id);
+        PromotedMessage promotion = findPromotionForUpdate(id);
         requireStatus(promotion, PromotedMessageStatus.PENDING, "denied");
 
         releaseHold(promotion);
@@ -280,11 +290,11 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = StripeException.class)
     public PromotedMessageDetailDto cancelByAdmin(Long id, String reason) throws StripeException {
         requireReason(reason);
         // PENDING: hold released; APPROVED: promotion stopped, payment kept
-        return cancelActive(findPromotion(id), CanceledBy.ADMIN, reason);
+        return cancelActive(findPromotionForUpdate(id), CanceledBy.ADMIN, reason);
     }
 
     @Override
@@ -397,7 +407,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         // promotions are NOT refunded and keep running; they are only stopped —
         // without a refund — if the ban's message deletion removes their message.
         List<PromotedMessage> pendingPromotions =
-                promotedMessageRepository.findByOwner_IdAndStatusIn(userId, List.of(PromotedMessageStatus.PENDING));
+                promotedMessageRepository.findByOwnerIdAndStatusInForUpdate(userId, List.of(PromotedMessageStatus.PENDING));
         int released = 0;
         double totalReturned = 0;
         String currency = "USD";
@@ -412,6 +422,8 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
                 promotion.setReason("Owner permanently banned — pending promotion canceled and payment hold released.");
                 promotedMessageRepository.save(promotion);
                 broadcastPromotionUpdate(promotion);
+                notifyOwnerOfResolution(promotion, promotion.getStatus(), promotion.getCanceledBy(),
+                        promotion.getReason());
 
                 released++;
                 totalReturned += promotion.getAmount() != null ? promotion.getAmount() : 0;
@@ -430,13 +442,15 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
     }
 
     @Override
+    // System deletion catches checked payment failures and must still commit its own work.
+    // Payment operations precede resolution, so a failed item cannot emit a success notification.
     @Transactional
     public void cancelForMessageRemoval(Long messageId, boolean removedByStaff) throws StripeException {
         if (messageId == null) {
             return;
         }
         List<PromotedMessage> active =
-                promotedMessageRepository.findByMessage_IdInAndStatusIn(List.of(messageId), ACTIVE_STATUSES);
+                promotedMessageRepository.findByMessageIdAndStatusInForUpdate(messageId, ACTIVE_STATUSES);
         for (PromotedMessage promotion : active) {
             cancelActive(promotion,
                     removedByStaff ? CanceledBy.ADMIN : CanceledBy.USER,
@@ -453,7 +467,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         Instant effectiveCutoff = cutoff != null ? cutoff : Instant.EPOCH;
 
         List<PromotedMessage> affected =
-                promotedMessageRepository.findByOwner_IdAndStatusIn(userId, ACTIVE_STATUSES).stream()
+                promotedMessageRepository.findByOwnerIdAndStatusInForUpdate(userId, ACTIVE_STATUSES).stream()
                         .filter(promotion -> promotion.getMessage().getCreatedAt() != null
                                 && promotion.getMessage().getCreatedAt().isAfter(effectiveCutoff))
                         .toList();
@@ -522,7 +536,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         // nothing wrong, so APPROVED payments are refunded (the one cancel path
         // that refunds) and PENDING holds are released.
         List<PromotedMessage> active =
-                promotedMessageRepository.findByChatRoomIdAndStatusIn(roomId, ACTIVE_STATUSES);
+                promotedMessageRepository.findByChatRoomIdAndStatusInForUpdate(roomId, ACTIVE_STATUSES);
         int released = 0;
         int refunded = 0;
         double totalReturned = 0;
@@ -539,7 +553,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
                 resolve(promotion, PromotedMessageStatus.CANCELED, CanceledBy.ADMIN,
                         wasPending
                                 ? "Chat room archived — pending promotion canceled and payment hold released."
-                                : "Chat room archived — promotion canceled and payment refunded.");
+                                : "Chat room archived — promotion canceled and payment refund submitted.");
                 if (wasPending) {
                     released++;
                 } else {
@@ -582,6 +596,11 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
                 .orElseThrow(() -> new IllegalArgumentException("Promoted message not found with id: " + id));
     }
 
+    private PromotedMessage findPromotionForUpdate(Long id) {
+        return promotedMessageRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new IllegalArgumentException("Promoted message not found with id: " + id));
+    }
+
     /**
      * Moderation-cancel semantics shared by admin cancel, staff message removal
      * and ban-triggered message deletion: a PENDING hold is released; an
@@ -600,21 +619,23 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
 
     private void refundCapturedPayment(PromotedMessage promotion) throws StripeException {
         PaymentReceipt receipt = promotion.getReceipt();
-        if (receipt != null && receipt.getStripePaymentIntentId() != null) {
+        if (receipt != null && receipt.getStripePaymentIntentId() != null
+                && !receipt.getStripePaymentIntentId().isBlank()) {
             paymentService.refundPayment(receipt.getStripePaymentIntentId());
             receipt.setStatus("REFUNDED");
         } else {
-            log.warn("No payment receipt found for promotion {}", promotion.getId());
+            throw new IllegalStateException("No payment receipt found for promotion " + promotion.getId());
         }
     }
 
     private void releaseHold(PromotedMessage promotion) throws StripeException {
         PaymentReceipt receipt = promotion.getReceipt();
-        if (receipt != null && receipt.getStripePaymentIntentId() != null) {
+        if (receipt != null && receipt.getStripePaymentIntentId() != null
+                && !receipt.getStripePaymentIntentId().isBlank()) {
             paymentService.cancelPaymentAuthorization(receipt.getStripePaymentIntentId());
             receipt.setStatus("CANCELLED");
         } else {
-            log.warn("No payment receipt found for promotion {}", promotion.getId());
+            throw new IllegalStateException("No payment receipt found for promotion " + promotion.getId());
         }
     }
 
@@ -632,24 +653,27 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         return toDetailDto(saved);
     }
 
-    /**
-     * Persistent owner notification for staff-driven resolutions: DENIED, and
-     * CANCELED only when staff initiated it. USER cancels are the owner's own
-     * action and SYSTEM_BAN owners cannot access notifications.
-     */
     private void notifyOwnerOfResolution(PromotedMessage promotion, PromotedMessageStatus status,
                                          CanceledBy canceledBy, String reason) {
         if (status == PromotedMessageStatus.DENIED) {
-            notificationService.createAndSend(promotion.getOwner(), NotificationType.PROMOTION_DENIED,
+            notifyOwner(promotion, NotificationType.PROMOTION_DENIED,
                     "Your promoted message was denied",
-                    "Your promoted message in " + promotion.getChatRoomName() + " was denied. Reason: " + reason,
-                    null, "PROMOTED_MESSAGE", promotion.getId());
-        } else if (status == PromotedMessageStatus.CANCELED && canceledBy == CanceledBy.ADMIN) {
-            notificationService.createAndSend(promotion.getOwner(), NotificationType.PROMOTION_CANCELED,
+                    "Your promoted message #" + promotion.getId() + " in " + promotion.getChatRoomName()
+                            + " was denied. Reason: " + reason);
+        } else if (status == PromotedMessageStatus.CANCELED) {
+            String actor = canceledBy == CanceledBy.USER ? "at your request"
+                    : canceledBy == CanceledBy.SYSTEM_BAN ? "automatically because of an account ban" : "by staff";
+            notifyOwner(promotion, NotificationType.PROMOTION_CANCELED,
                     "Your promoted message was canceled",
-                    "Your promoted message in " + promotion.getChatRoomName() + " was canceled by staff. Reason: " + reason,
-                    null, "PROMOTED_MESSAGE", promotion.getId());
+                    "Your promoted message #" + promotion.getId() + " in " + promotion.getChatRoomName()
+                            + " was canceled " + actor + "."
+                            + (reason == null || reason.isBlank() ? "" : " Reason: " + reason));
         }
+    }
+
+    private void notifyOwner(PromotedMessage promotion, NotificationType type, String title, String body) {
+        purchaseCommunicationService.notifyOwner(promotion.getOwner(), PurchaseType.PROMOTED_MESSAGE,
+                promotion.getId(), type, title, body, promotion.getReceipt());
     }
 
     private void broadcastPromotionUpdate(PromotedMessage promotion) {

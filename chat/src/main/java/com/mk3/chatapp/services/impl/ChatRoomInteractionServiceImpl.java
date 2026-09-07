@@ -20,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.Principal;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -269,7 +271,20 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
 
         var requesterRole = principal != null ? userService.getPrincipal(principal).getRole() : Role.GUEST;
         var chatRooms = chatRoomService.searchChatRoomsByName(name, requesterRole);
+        String query = name.trim().toLowerCase(Locale.ROOT);
+        var exactMatchIds = chatRooms.stream()
+                .filter(room -> room.getName().trim().toLowerCase(Locale.ROOT).equals(query))
+                .map(ChatRoom::getId)
+                .collect(Collectors.toSet());
+
+        // Rank exact matches first, then popularity using the returned population counts.
         return chatRooms.stream().map(chatRoom -> roomActivityService.getRoomPopulation(chatRoom.getId().toString()))
+                .sorted(Comparator.comparingInt((RoomPopulationDTO room) ->
+                                exactMatchIds.contains(room.roomId()) ? 0 : 1)
+                        .thenComparing(Comparator.comparingLong(RoomPopulationDTO::onlineUsersCount).reversed())
+                        .thenComparing(Comparator.comparingLong(RoomPopulationDTO::activeUsersCount).reversed())
+                        .thenComparing(room -> room.roomName().trim(), String.CASE_INSENSITIVE_ORDER)
+                        .thenComparing(RoomPopulationDTO::roomId))
                 .toList();
     }
 

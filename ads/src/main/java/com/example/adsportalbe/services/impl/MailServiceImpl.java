@@ -7,6 +7,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -134,59 +135,28 @@ public class MailServiceImpl implements MailService {
     }
 
     @Override
-    public void sendAdRejectionEmail(User user, String adTitle, String rejectionReason) {
-        log.info("Sending ad rejection email to {} for ad {}", user.getEmail(), adTitle);
-
+    public void sendPurchaseUpdateEmail(String to, String title, String body, String purchaseReference,
+                                        String detailsPath) {
+        String detailsUrl = FRONT_END_URL.replaceAll("/+$", "") + detailsPath;
         Context context = new Context();
-        context.setVariable("name", user.getFirstName());
-        context.setVariable("adTitle", adTitle);
-        context.setVariable("rejectionReason", rejectionReason);
-
-        String htmlContent = templateEngine.process("ads-portal/AD_REJECTION_TEMPLATE", context);
+        context.setVariable("title", title);
+        context.setVariable("paragraphs", body.split("\\R\\s*\\R"));
+        context.setVariable("purchaseReference", purchaseReference);
+        context.setVariable("detailsUrl", detailsUrl);
+        String htmlContent = templateEngine.process("ads-portal/PURCHASE_UPDATE_TEMPLATE", context);
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
-            helper.setTo(user.getEmail());
-            helper.setSubject("Ad Rejected - " + adTitle);
-            helper.setText(htmlContent, true);
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setTo(to);
+            helper.setSubject(title);
             helper.setFrom(MAIL_USERNAME, FROM_NAME);
-
+            helper.setText(purchaseReference + "\n\n" + body + "\n\nView purchase: " + detailsUrl, htmlContent);
+            helper.addInline("allchat-light-logo", new ClassPathResource("mail/allchat-light-logo.png"), "image/png");
             mailSender.send(message);
-
-            log.info("Ad rejection email sent to {}", user.getEmail());
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            log.error("Failed to send ad rejection email to {}", user.getEmail(), e);
-            throw new RuntimeException("Failed to send ad rejection email", e);
-        }
-    }
-
-    @Override
-    public void sendAdApprovalEmail(User user, String adTitle) {
-        log.info("Sending ad approval email to {} for ad {}", user.getEmail(), adTitle);
-
-        Context context = new Context();
-        context.setVariable("name", user.getFirstName());
-        context.setVariable("adTitle", adTitle);
-
-        String htmlContent = templateEngine.process("ads-portal/AD_APPROVAL_TEMPLATE", context);
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
-            helper.setTo(user.getEmail());
-            helper.setSubject("Ad Approved - " + adTitle);
-            helper.setText(htmlContent, true);
-            helper.setFrom(MAIL_USERNAME, FROM_NAME);
-
-            mailSender.send(message);
-
-            log.info("Ad approval email sent to {}", user.getEmail());
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            log.error("Failed to send ad approval email to {}", user.getEmail(), e);
-            throw new RuntimeException("Failed to send ad approval email", e);
+        } catch (MessagingException | UnsupportedEncodingException exception) {
+            // Only the outbox worker logs a safe failure category and retries after purchase commit.
+            throw new org.springframework.mail.MailPreparationException("Could not prepare purchase update email", exception);
         }
     }
 }

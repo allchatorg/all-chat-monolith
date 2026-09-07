@@ -24,6 +24,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -389,10 +390,20 @@ public class RoomActivityServiceImpl implements RoomActivityService {
             return new PageImpl<>(Collections.emptyList(), PageRequest.of(page, pageSize), 0);
         }
 
+        Comparator<RoomPopulationDTO> onlineFirst = Comparator.comparingLong(RoomPopulationDTO::onlineUsersCount)
+                .reversed();
+        Comparator<RoomPopulationDTO> activeFirst = Comparator.comparingLong(RoomPopulationDTO::activeUsersCount)
+                .reversed();
+        Comparator<RoomPopulationDTO> roomOrder = popularitySort == RoomPopularitySort.ACTIVE
+                ? activeFirst.thenComparing(onlineFirst)
+                : onlineFirst.thenComparing(activeFirst);
+
         List<RoomPopulationDTO> allRooms = allRoomIds.stream().map(this::getRoomPopulation)
                 .filter(room -> room.onlineUsersCount() > 0)
                 .filter(room -> !excludedRooms.contains(room.roomName().toLowerCase()))
                 .filter(room -> chatRoomNoiseLevelEnum == null || room.noiseLevel().equals(chatRoomNoiseLevelEnum))
+                // Rank before pagination; stable sorting preserves leaderboard order when both counts tie.
+                .sorted(roomOrder)
                 .toList();
 
         long total = allRooms.size();

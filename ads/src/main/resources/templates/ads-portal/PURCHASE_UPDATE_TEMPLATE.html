@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title}">Purchase update - allchat</title>
+    <style>
+        @media (max-width: 600px) {
+            .purchase-container { border-radius: 0 !important; }
+            .purchase-header, .purchase-content, .purchase-footer { padding: 30px 20px !important; }
+        }
+    </style>
+</head>
+<body style="margin:0;padding:20px;background:#f5f7fa;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:16px;line-height:1.6;color:#333;">
+<table role="presentation" class="purchase-container" cellpadding="0" cellspacing="0"
+       style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;border-radius:20px;box-shadow:0 20px 40px rgba(0,0,0,0.1);overflow:hidden;border-spacing:0;">
+    <tr>
+        <td class="purchase-header" style="padding:40px 30px;background:#667eea;color:#ffffff;text-align:center;">
+            <img src="cid:allchat-light-logo" alt="allchat" width="240" height="69"
+                 style="display:block;width:240px;max-width:100%;height:auto;margin:0 auto 10px;border:0;">
+            <p style="margin:0;font-size:17.6px;font-weight:300;color:#ffffff;line-height:1.6;">Connect • Chat • Share</p>
+        </td>
+    </tr>
+    <tr>
+        <td class="purchase-content" style="padding:40px 30px;">
+            <p style="margin:0 0 20px;font-size:22.4px;line-height:1.6;color:#222;">Hello! 👋</p>
+            <h1 style="margin:0 0 20px;font-size:24px;font-weight:600;line-height:1.4;color:#222;" th:text="${title}">Your purchase update</h1>
+            <div style="padding:20px;border-radius:10px;margin:20px 0;background:#f8f9fa;border-left:4px solid #667eea;">
+                <h2 style="margin:0 0 10px;font-size:19.2px;line-height:1.6;font-weight:600;color:#667eea;">Purchase details</h2>
+                <p style="margin:5px 0;color:#555;line-height:1.6;" th:text="${purchaseReference}">Purchase reference</p>
+            </div>
+            <p th:each="paragraph : ${paragraphs}" th:text="${paragraph}"
+               style="margin:0 0 20px;font-size:17.6px;line-height:1.8;color:#444;white-space:pre-line;overflow-wrap:anywhere;">Your purchase status has changed.</p>
+            <p style="margin:30px 0;text-align:center;">
+                <a th:href="${detailsUrl}"
+                   style="display:inline-block;padding:14px 28px;border-radius:10px;background:#667eea;color:#ffffff;text-decoration:none;font-size:17.6px;font-weight:600;line-height:1.6;">View purchase</a>
+            </p>
+            <div style="height:3px;background:#667eea;margin:20px 0;border-radius:2px;"></div>
+            <div style="background:#f0f3f7;padding:20px;border-radius:10px;margin:30px 0 0;border-left:4px solid #667eea;">
+                <p style="margin:0;font-size:15.2px;line-height:1.6;color:#555;">Sign in to the account used for this purchase to view its details.</p>
+            </div>
+        </td>
+    </tr>
+    <tr>
+        <td class="purchase-footer" style="padding:30px;background:#f0f3f7;border-top:1px solid #ddd;text-align:center;">
+            <p style="margin:0;color:#555;font-size:17.6px;line-height:1.8;">Best regards,<br>The <span style="color:#667eea;font-weight:bold;">allchat</span> Team</p>
+            <p style="margin:20px 0 0;font-size:12.8px;line-height:1.6;color:#888;">©2026 allchat LLC. All rights reserved. 18+ only. allchat<sup style="font-size:0.6em;">®</sup> is a registered trademark of allchat LLC.</p>
+        </td>
+    </tr>
+</table>
+</body>
+</html>
