@@ -25,7 +25,7 @@ public class MailServiceImpl implements MailService {
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
 
-    private final String FROM_NAME = "allChat Team";
+    private final String FROM_NAME = "allchat Team";
 
     @Value("${app.FRONT_END.URL}")
     private String FRONT_END_URL;
