@@ -17,6 +17,8 @@ public interface UserMapper {
             "java(user.getIdVerificationStatus() == com.mk3.chatapp.enums.IdVerificationStatus.REJECTED && user.getVerifiedDateOfBirth() != null)")
     @Mapping(target = "proActive", ignore = true)
     @Mapping(target = "showProBadge", ignore = true)
+    @Mapping(target = "usernameFont", source = "effectiveUsernameFont")
+    @Mapping(target = "messageFont", source = "effectiveMessageFont")
     UserDTO toDto(User user);
 
     /** Only authentication/account-owner responses may disclose hidden membership. */
@@ -27,5 +29,7 @@ public interface UserMapper {
     UserDTO toOwnerDto(User user);
 
     @Mapping(target = "username", expression = "java(user.getApplicationUsername())")
+    @Mapping(target = "usernameFont", source = "effectiveUsernameFont")
+    @Mapping(target = "messageFont", source = "effectiveMessageFont")
     UserMinimalDTO toMinimalDto(User user);
 }

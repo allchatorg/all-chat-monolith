@@ -24,10 +24,13 @@ public class ProBadgeService {
     private final UserRepository userRepository;
     private final ApplicationEventPublisher events;
     private final EntityManager entityManager;
+    private final ProFontService fonts;
 
     /** Caller holds the user row lock, shared with all subscription mutations. */
     @Transactional(propagation = Propagation.MANDATORY)
     public void updateEntitlement(User user, Instant paidThrough) {
+        // A late renewal must not revive choices whose local entitlement expired.
+        fonts.resetExpiredPreferences(user);
         boolean previouslyVisible = user.isProBadgeVisible();
         user.setProPaidThrough(paidThrough);
         persistVisibility(user, previouslyVisible != user.isProBadgeVisible());
@@ -40,6 +43,7 @@ public class ProBadgeService {
     }
 
     private void persistVisibility(User user, boolean forceRevision) {
+        fonts.resetExpiredPreferences(user);
         boolean visible = user.isProBadgeVisible();
         if (forceRevision || visible != user.isProBadgeLastPublishedVisible()) {
             user.setProBadgeLastPublishedVisible(visible);
@@ -82,6 +86,7 @@ public class ProBadgeService {
     }
 
     private static ProBadgeDTO toDto(User user) {
-        return new ProBadgeDTO(user.getId(), user.isProBadgeVisible(), user.getProBadgeRevision());
+        return new ProBadgeDTO(user.getId(), user.isProBadgeVisible(), user.getProBadgeRevision(),
+                user.getEffectiveUsernameFont(), user.getEffectiveMessageFont(), user.getFontRevision());
     }
 }

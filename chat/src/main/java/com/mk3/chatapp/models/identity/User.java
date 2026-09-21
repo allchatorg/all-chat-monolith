@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.mk3.chatapp.enums.IdVerificationStatus;
 import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.enums.TimeFormat;
+import com.mk3.chatapp.enums.FontPreset;
 import com.mk3.chatapp.models.*;
 import jakarta.persistence.*;
 import lombok.*;
@@ -130,9 +131,56 @@ public class User extends Base implements UserDetails {
     @Column(name = "pro_badge_last_published_visible", nullable = false, updatable = false)
     private boolean proBadgeLastPublishedVisible;
 
+    // Only locked font/subscription operations may update this state. Ordinary
+    // saves can contain an older User loaded from an authenticated session.
+    @JsonIgnore
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "username_font", nullable = false, length = 16, updatable = false)
+    private FontPreset usernameFont = FontPreset.DEFAULT;
+
+    @JsonIgnore
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(name = "message_font", nullable = false, length = 16, updatable = false)
+    private FontPreset messageFont = FontPreset.DEFAULT;
+
+    @Column(name = "font_revision", nullable = false, updatable = false)
+    private long fontRevision;
+
+    @JsonIgnore
+    @Column(name = "font_changes_date", updatable = false)
+    private LocalDate fontChangesDate;
+
+    @JsonIgnore
+    @Column(name = "font_changes_count", nullable = false, updatable = false)
+    private int fontChangesCount;
+
+    // Previously serialized sessions and older builders may contain null fields.
+    public FontPreset getUsernameFont() {
+        return usernameFont == null ? FontPreset.DEFAULT : usernameFont;
+    }
+
+    public FontPreset getMessageFont() {
+        return messageFont == null ? FontPreset.DEFAULT : messageFont;
+    }
+
+    public FontPreset getEffectiveUsernameFont() {
+        return isProActive() ? getUsernameFont() : FontPreset.DEFAULT;
+    }
+
+    public FontPreset getEffectiveMessageFont() {
+        return isProActive() ? getMessageFont() : FontPreset.DEFAULT;
+    }
+
     @JsonIgnore
     public boolean isProActive() {
-        return !Boolean.TRUE.equals(getDeleted()) && proPaidThrough != null && proPaidThrough.isAfter(Instant.now());
+        return isProActiveAt(Instant.now());
+    }
+
+    @JsonIgnore
+    public boolean isProActiveAt(Instant now) {
+        return !Boolean.TRUE.equals(getDeleted()) && proPaidThrough != null && proPaidThrough.isAfter(now);
     }
 
     public boolean isProBadgeVisible() {

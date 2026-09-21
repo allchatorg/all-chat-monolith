@@ -7,6 +7,9 @@ import com.mk3.chatapp.dtos.requests.UpdateTimeZoneRequest;
 import com.mk3.chatapp.enums.TimeFormat;
 import com.mk3.chatapp.services.SettingsService;
 import com.mk3.chatapp.services.ProBadgeService;
+import com.mk3.chatapp.services.ProFontService;
+import com.mk3.chatapp.dtos.requests.UpdateFontSettingsRequest;
+import com.mk3.chatapp.dtos.responses.FontSettingsDTO;
 import com.mk3.chatapp.services.SecurityService;
 import com.mk3.chatapp.dtos.requests.UpdateAppearanceRequest;
 import com.mk3.chatapp.dtos.responses.AppearanceDTO;
@@ -28,6 +31,25 @@ public class SettingsController {
     private final SettingsService settingsService;
     private final ProBadgeService proBadgeService;
     private final SecurityService securityService;
+    private final ProFontService proFontService;
+
+    @GetMapping("/fonts")
+    public FontSettingsDTO getFonts() {
+        return proFontService.getSettings(currentUserId());
+    }
+
+    @PatchMapping("/fonts")
+    public FontSettingsDTO updateFonts(@Valid @RequestBody UpdateFontSettingsRequest request) {
+        return proFontService.updateSettings(currentUserId(), request);
+    }
+
+    private Long currentUserId() {
+        var user = securityService.getCurrentUser();
+        if (user == null) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED);
+        }
+        return user.getId();
+    }
 
     @PatchMapping("/appearance")
     public AppearanceDTO updateAppearance(@Valid @RequestBody UpdateAppearanceRequest request) {

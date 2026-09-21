@@ -142,7 +142,8 @@ public class ReactionServiceImpl implements ReactionService {
                 responseType,
                 reaction.getEmoji(),
                 reaction.getEmojiId(),
-                new UserMinimalDTO(user.getId(), user.getApplicationUsername(), user.isProBadgeVisible(), user.getProBadgeRevision()));
+                new UserMinimalDTO(user.getId(), user.getApplicationUsername(), user.isProBadgeVisible(), user.getProBadgeRevision(),
+                        user.getEffectiveUsernameFont(), user.getEffectiveMessageFont(), user.getFontRevision()));
     }
 
     private void broadcastReaction(Reaction reaction, ReactionType responseType, User user) {
