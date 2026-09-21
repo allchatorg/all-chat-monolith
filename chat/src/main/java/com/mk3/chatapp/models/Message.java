@@ -34,6 +34,9 @@ public class Message extends Base {
     @Column(nullable = false, length = 2000)
     private String content;
 
+    @Column(name = "sticker_id", length = 32)
+    private String stickerId;
+
     // Marker-stripped copy of content kept for LIKE search; null on rows
     // written before the column existed (search falls back to content).
     @Column(name = "content_plain", length = 500)

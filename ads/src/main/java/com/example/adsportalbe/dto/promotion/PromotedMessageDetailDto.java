@@ -11,6 +11,7 @@ public record PromotedMessageDetailDto(
         Long id,
         Long messageId,
         String messageContent,
+        String messageStickerId,
         String messageSenderUsername,
         Instant messageCreatedAt,
         boolean messageDeleted,

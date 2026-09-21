@@ -67,7 +67,8 @@ public class MessageHistoryTransformerImpl implements MessageHistoryTransformer 
                 null,
                 null,
                 sender != null && sender.isProBadgeVisible(),
-                sender != null ? sender.getProBadgeRevision() : 0L
+                sender != null ? sender.getProBadgeRevision() : 0L,
+                history.getStickerId()
         );
     }
 

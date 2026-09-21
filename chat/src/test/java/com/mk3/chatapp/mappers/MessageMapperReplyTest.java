@@ -25,6 +25,7 @@ class MessageMapperReplyTest {
         var parent = Message.builder()
                 .id(99L)
                 .content("original content")
+                .stickerId("pepe")
                 .sender(sender)
                 .chatRoom(ChatRoom.builder().id(5L).build())
                 .build();
@@ -45,6 +46,7 @@ class MessageMapperReplyTest {
         var staff = mapper.toMessageResponseDTO(message, true).replyTo();
 
         assertThat(regular.content()).isEqualTo("original content");
+        assertThat(regular.stickerId()).isEqualTo("pepe");
         assertThat(regular.deleted()).isFalse();
         assertThat(regular.id()).isEqualTo(99L);
         assertThat(regular.senderId()).isEqualTo(7L);
@@ -60,6 +62,7 @@ class MessageMapperReplyTest {
         var replyInfo = mapper.toMessageResponseDTO(message, false).replyTo();
 
         assertThat(replyInfo.content()).isNull();
+        assertThat(replyInfo.stickerId()).isNull();
         assertThat(replyInfo.deleted()).isTrue();
         assertThat(replyInfo.senderUsername()).isEqualTo("original-sender");
     }
@@ -71,6 +74,7 @@ class MessageMapperReplyTest {
         var replyInfo = mapper.toMessageResponseDTO(message, true).replyTo();
 
         assertThat(replyInfo.content()).isEqualTo("original content");
+        assertThat(replyInfo.stickerId()).isEqualTo("pepe");
         assertThat(replyInfo.deleted()).isTrue();
     }
 
@@ -82,8 +86,10 @@ class MessageMapperReplyTest {
         var staff = mapper.toMessageResponseDTO(message, true).replyTo();
 
         assertThat(regular.content()).isNull();
+        assertThat(regular.stickerId()).isNull();
         assertThat(regular.deleted()).isTrue();
         assertThat(staff.content()).isNull();
+        assertThat(staff.stickerId()).isNull();
         assertThat(staff.deleted()).isTrue();
     }
 

@@ -8,6 +8,11 @@ public record CreateMessageRequestDTO(
         String content,
         Long chatRoomId,
         List<AttachmentDTO> attachments,
-        Long replyToMessageId
+        Long replyToMessageId,
+        String stickerId
 ) {
+    public CreateMessageRequestDTO(String content, Long chatRoomId, List<AttachmentDTO> attachments,
+                                   Long replyToMessageId) {
+        this(content, chatRoomId, attachments, replyToMessageId, null);
+    }
 }

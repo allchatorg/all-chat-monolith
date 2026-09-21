@@ -54,6 +54,7 @@ public interface MessageMapper {
                 hasAttachment,
                 attachmentName,
                 parent.getSender().isProBadgeVisible(),
-                parent.getSender().getProBadgeRevision());
+                parent.getSender().getProBadgeRevision(),
+                hideContent ? null : parent.getStickerId());
     }
 }

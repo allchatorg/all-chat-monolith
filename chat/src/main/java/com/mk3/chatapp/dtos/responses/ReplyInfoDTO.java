@@ -10,6 +10,7 @@ public record ReplyInfoDTO(
         boolean hasAttachment,
         String attachmentName,
         boolean senderProBadgeVisible,
-        long senderProBadgeRevision
+        long senderProBadgeRevision,
+        String stickerId
 ) {
 }
