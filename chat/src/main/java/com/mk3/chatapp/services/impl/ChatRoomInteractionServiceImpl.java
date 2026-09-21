@@ -168,8 +168,10 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
             throw new IllegalArgumentException("A guest user cannot create a room");
         }
 
+        user = userChatRoomService.prepareNewPublicRoom(user);
         var chatRoom = chatRoomService.createChatRoom(request, user);
         UserChatRoom userChatroom = userChatRoomService.joinChatRoom(user, chatRoom);
+        roomActivityService.storeRoomMetadata(chatRoom.getId().toString(), chatRoom.getName());
         var roomPopulation = roomActivityService.userJoinedRoom(chatRoom.getId().toString(), user.getId().toString());
 
         // TODO replace with mapper

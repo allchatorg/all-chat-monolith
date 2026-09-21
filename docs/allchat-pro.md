@@ -1,9 +1,73 @@
 # allchat Pro operations
 
 Pro is one recurring product: USD 5/month, with USD 50/year behind the
-`ALLCHAT_PRO_YEARLY_BILLING_ENABLED` feature flag (default `false`). The only launch
-entitlement is a public username badge, controlled by the owner's saved
-appearance preference. Roles and moderation privileges never grant Pro.
+`ALLCHAT_PRO_YEARLY_BILLING_ENABLED` feature flag (default `false`). Active paid
+access includes higher upload, message, and public chatroom limits, plus a public
+username badge controlled by the owner's saved appearance preference. Hiding the
+badge does not remove the other benefits. Roles and moderation privileges never
+grant Pro.
+
+## Account limits
+
+| Account | Joined public chatrooms | Visible message characters | Per-video upload | Rolling hourly uploads |
+| --- | ---: | ---: | ---: | ---: |
+| Guest | 20 | 500 | 10 MB | 25 MB |
+| Claimed | 25 | 500 | 10 MB | 25 MB |
+| Email-verified | 50 | 500 | 10 MB | 25 MB |
+| allchat Pro | 100 | 2,500 | 100 MB | 500 MB |
+
+MB means 1,048,576 bytes, matching the existing application convention. The
+regular per-file values remain the configured attachment-type limits (10 MB in
+the seed data); Pro overrides only the VIDEO category, which includes GIFs.
+Other file types retain their configured limits. The total allowance covers all
+chat attachment types uploaded in the previous hour, using the existing sum of
+nondeleted attachments. The lifetime upload counter is a statistic, not a quota.
+
+Tier precedence is active paid Pro, email verification, claimed account, then
+guest. Phone and ID verification do not select the email-verified tier. Staff
+retain unlimited public memberships and hourly upload usage; their per-file and
+message limits still depend on Pro. Private conversations do not consume public
+room capacity or gain new access permissions through Pro.
+
+Existing memberships survive rollout or Pro expiry even when above the current
+allowance. Joining a new public room or creating a room requires spare capacity;
+selecting an existing membership remains available. Concurrent joins and uploads
+for one account share its database row lock so quota checks and persistence are
+serialized. Uploads hold that lock through scanning and storage.
+
+Message limits count marker-stripped text using the existing string-length
+semantics. Raw formatting is capped at four times the visible allowance: 2,000
+characters for regular accounts and 10,000 for Pro. Existing long messages and
+edit history remain readable after expiry; new sends and edits use the current
+entitlement. End-of-period cancellation retains all benefits through paid-through.
+The client refreshes account data on focus, reconnect, subscription changes, and
+every 60 seconds while chatting; the server checks the entitlement on each action.
+Rejected sends and edits retain their draft text and uploaded attachment, including
+when Pro expires between the client's last refresh and submission.
+
+## Limits rollout
+
+1. Apply [sql/pro-account-limits.sql](sql/pro-account-limits.sql) to the persistent
+   database before the new backend. It widens message content, searchable plain
+   content, and edit history without removing data. Retain the wider columns on
+   rollback; shrinking them can discard existing Pro messages.
+2. Configure every reverse proxy, ingress, and request-body gateway on the upload
+   path to accept at least **115,343,360 bytes (110 MiB)**, including multipart
+   overhead. A 100 MB request-body ceiling cannot carry a full 100 MiB file plus
+   framing. Allow sufficient request time for upload, virus scanning, and storage.
+3. Recreate/update the ClamAV service with `StreamMaxLength 110M`,
+   `MaxFileSize 110M`, `MaxScanSize 400M`, and `AlertExceedsMax yes`. The Compose
+   service supplies these through the official image's
+   [CLAMD_CONF environment configuration](https://github.com/Cisco-Talos/clamav-docker/blob/main/clamav/1.4/alpine/scripts/docker-entrypoint.sh).
+   For an externally managed scanner, apply the equivalent `clamd.conf` settings.
+   Keep scanning enabled; scanner failures or limit-exceeded results must reject
+   the upload. See the [ClamAV configuration reference](https://github.com/Cisco-Talos/clamav/blob/main/etc/clamd.conf.sample).
+4. Deploy the backend with schema validation, then the frontend. Spring accepts
+   100 MB files and 110 MB requests, while account/type validation enforces the
+   smaller regular limits. Ads uploads retain their separate 30 MB file cap.
+
+Production proxies, databases, and scanner instances are deployment prerequisites;
+updating this repository does not change those running services.
 
 ## Database deployment
 
@@ -214,6 +278,24 @@ build. Manually verify in Stripe test mode before live enablement:
 
 Record what was actually exercised; successful compilation alone does not prove
 provider configuration, production schema readiness, or payment lifecycle behavior.
+
+### Account-limit verification — September 21, 2026
+
+* Backend `./mvnw -DskipTests verify` passed for all five modules. Existing Lombok
+  and mapper warnings remain. No tests were added or run.
+* Frontend TypeScript checking and `npm run build` passed. Docker Compose
+  configuration validation and whitespace checks passed.
+* Source review covered exact-cap versus over-cap comparisons, serialized
+  same-account uploads/joins, retained memberships, hidden-badge entitlement
+  refresh, current-limit edits, formatted text/history capacity, staff exemptions,
+  and preservation of rejected drafts.
+* The actual benefits and comparison components were rendered as static HTML with
+  the project's compiled CSS and reviewed at 375px and 760px in light/dark mode.
+  This did not contact the application backend or exercise billing.
+
+The SQL migration was not applied to a running database. Live upload/scan/storage,
+concurrent requests, subscription expiry, and production ingress behavior still
+require deployment validation; compilation and source review do not exercise them.
 
 ### Development verification — September 18, 2026
 

@@ -17,6 +17,7 @@ import com.mk3.chatapp.repositories.MessageRepository;
 import com.mk3.chatapp.repositories.UserChatRoomRepository;
 import com.mk3.chatapp.services.*;
 import com.mk3.chatapp.specifications.MessageSpecification;
+import com.mk3.chatapp.utils.AccountLimits;
 import com.mk3.chatapp.utils.MessageMarkers;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -36,11 +37,11 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class MessagesServiceImpl implements MessagesService {
-    public static final int MAX_LENGTH = 500;
+    public static final int MAX_LENGTH = AccountLimits.REGULAR_MESSAGE_LENGTH;
     // Hard ceiling on raw stored content: the editor wraps each styled run in at
     // most 6 marker chars and needs >=1 visible char inside each group and
     // between groups, so raw <= 4 * visible for any legitimate message.
-    public static final int MAX_RAW_LENGTH = 4 * MAX_LENGTH;
+    public static final int MAX_RAW_LENGTH = AccountLimits.MAX_RAW_MESSAGE_LENGTH;
     private final MessageRepository messageRepository;
 
     private final WebSocketBroadcastService webSocketBroadcastService;
@@ -58,13 +59,14 @@ public class MessagesServiceImpl implements MessagesService {
      * Content cannot be null or empty.
      */
     public static void validateMessageForSave(String content, int maxLength, List<AttachmentDTO> attachments) {
-        if (content == null || content.isEmpty() && attachments.isEmpty()) {
+        if (content == null || content.isEmpty() && (attachments == null || attachments.isEmpty())) {
             throw new IllegalArgumentException("Message content cannot be null or empty");
         }
 
-        if (content.length() > MAX_RAW_LENGTH) {
+        int maxRawLength = 4 * maxLength;
+        if (content.length() > maxRawLength) {
             throw new IllegalArgumentException(
-                    "Message content exceeds maximum raw length of " + MAX_RAW_LENGTH + " characters");
+                    "Message content exceeds maximum raw length of " + maxRawLength + " characters");
         }
 
         if (MessageMarkers.strip(content).length() > maxLength) {
@@ -89,9 +91,10 @@ public class MessagesServiceImpl implements MessagesService {
 
         // If content is provided, validate length and content rules
         if (content != null && !content.isEmpty()) {
-            if (content.length() > MAX_RAW_LENGTH) {
+            int maxRawLength = 4 * maxLength;
+            if (content.length() > maxRawLength) {
                 throw new IllegalArgumentException(
-                        "Message content exceeds maximum raw length of " + MAX_RAW_LENGTH + " characters");
+                        "Message content exceeds maximum raw length of " + maxRawLength + " characters");
             }
 
             if (MessageMarkers.strip(content).length() > maxLength) {
@@ -179,7 +182,7 @@ public class MessagesServiceImpl implements MessagesService {
         }
 
         chatRoomService.validateRoomIsNotArchived(chatRoom, "send messages");
-        validateMessageForSave(messageRequestDTO.content(), MAX_LENGTH, messageRequestDTO.attachments());
+        validateMessageForSave(messageRequestDTO.content(), AccountLimits.messageLength(user), messageRequestDTO.attachments());
 
         var message = Message.builder()
                 .content(messageRequestDTO.content())
@@ -492,7 +495,7 @@ public class MessagesServiceImpl implements MessagesService {
                     "Messages of other users cannot be edited" + messageId);
         }
 
-        validateMessageForEdit(content, MAX_LENGTH, message.getAttachments().size());
+        validateMessageForEdit(content, AccountLimits.messageLength(user), message.getAttachments().size());
 
         messageEditHistoryService.save(message.getContent(), message, new ArrayList<>(message.getAttachments()), user);
         message.setContent(content);

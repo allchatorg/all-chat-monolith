@@ -15,12 +15,16 @@ import com.mk3.chatapp.services.AttachmentService;
 import com.mk3.chatapp.services.AttachmentTypeService;
 import com.mk3.chatapp.services.FileUploadService;
 import com.mk3.chatapp.services.TagService;
+import com.mk3.chatapp.utils.AccountLimits;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
@@ -28,6 +32,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AttachmentServiceImpl implements AttachmentService {
@@ -42,24 +47,25 @@ public class AttachmentServiceImpl implements AttachmentService {
 
     @Override
     public AttachmentDTO uploadAttachment(MultipartFile file, User user) {
-        AttachmentType attachmentType = attachmentTypeService.validateAndResolveAttachmentType(file);
-        File convertedFile = convertMultipartFileToFile(file);
-
+        AttachmentType attachmentType = attachmentTypeService.validateAndResolveAttachmentType(file, user);
         validateUploadUsage(user, file.getSize());
+        File convertedFile = convertMultipartFileToFile(file);
+        try {
+            String fileUrl = fileUploadService.uploadFile(convertedFile);
 
-        String fileUrl = fileUploadService.uploadFile(convertedFile);
+            Attachment attachment = Attachment.builder()
+                    .url(fileUrl)
+                    .name(file.getOriginalFilename())
+                    .size(file.getSize())
+                    .attachmentType(attachmentType)
+                    .mime(MimeType.fromMime(file.getContentType()))
+                    .build();
 
-        Attachment attachment = Attachment.builder()
-                .url(fileUrl)
-                .name(file.getOriginalFilename())
-                .size(file.getSize())
-                .attachmentType(attachmentType)
-                .mime(MimeType.fromMime(file.getContentType()))
-                .build();
-
-        Attachment savedAttachment = attachmentRepository.save(attachment);
-
-        return attachmentMapper.toDto(savedAttachment);
+            Attachment savedAttachment = attachmentRepository.save(attachment);
+            return attachmentMapper.toDto(savedAttachment);
+        } finally {
+            deleteTemporaryFile(convertedFile);
+        }
     }
 
     @Transactional
@@ -98,20 +104,30 @@ public class AttachmentServiceImpl implements AttachmentService {
     }
 
     private File convertMultipartFileToFile(MultipartFile file) {
+        File tempFile = null;
         try {
             String originalName = Objects.requireNonNull(file.getOriginalFilename());
             int dotIndex = originalName.lastIndexOf('.');
             String prefix = dotIndex > 0 ? originalName.substring(0, dotIndex) : originalName;
             String suffix = dotIndex > 0 ? originalName.substring(dotIndex) : "";
 
-            File tempFile = File.createTempFile(prefix + "-", suffix);
+            tempFile = File.createTempFile("upload-" + prefix + "-", suffix);
             file.transferTo(tempFile);
-
-            tempFile.deleteOnExit();
-
             return tempFile;
         } catch (Exception e) {
+            if (tempFile != null) {
+                deleteTemporaryFile(tempFile);
+            }
             throw new RuntimeException("Failed to convert MultipartFile to File: " + e.getMessage(), e);
+        }
+    }
+
+    private void deleteTemporaryFile(File file) {
+        try {
+            Files.deleteIfExists(file.toPath());
+        } catch (IOException e) {
+            log.warn("Could not delete temporary upload file {}", file, e);
+            file.deleteOnExit();
         }
     }
 
@@ -151,7 +167,7 @@ public class AttachmentServiceImpl implements AttachmentService {
         Instant since = Instant.now().minus(1, ChronoUnit.HOURS);
         long totalUploadedFilesSize = attachmentRepository.getTotalUploadedFilesSizeSince(user.getId().toString(),
                 since);
-        long maxAllowedSize = 25 * 1024 * 1024; // 25 MB
+        long maxAllowedSize = AccountLimits.hourlyUploadBytes(user);
 
         if (totalUploadedFilesSize + newFileSize > maxAllowedSize) {
             double usedMB = totalUploadedFilesSize / (1024.0 * 1024.0);

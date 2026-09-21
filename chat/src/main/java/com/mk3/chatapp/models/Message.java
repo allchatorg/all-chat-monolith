@@ -1,6 +1,7 @@
 package com.mk3.chatapp.models;
 
 import com.mk3.chatapp.models.identity.User;
+import com.mk3.chatapp.utils.AccountLimits;
 import com.mk3.chatapp.utils.MessageMarkers;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,12 +32,12 @@ public class Message extends Base {
     private ChatRoom chatRoom;
 
     // Raw marker text; capped by MessagesServiceImpl.MAX_RAW_LENGTH
-    @Column(nullable = false, length = 2000)
+    @Column(nullable = false, length = AccountLimits.MAX_RAW_MESSAGE_LENGTH)
     private String content;
 
     // Marker-stripped copy of content kept for LIKE search; null on rows
     // written before the column existed (search falls back to content).
-    @Column(name = "content_plain", length = 500)
+    @Column(name = "content_plain", length = AccountLimits.PRO_MESSAGE_LENGTH)
     private String contentPlain;
 
     @PrePersist
