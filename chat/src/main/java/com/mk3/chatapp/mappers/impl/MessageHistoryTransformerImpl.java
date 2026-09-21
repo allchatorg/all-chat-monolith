@@ -46,6 +46,7 @@ public class MessageHistoryTransformerImpl implements MessageHistoryTransformer 
         var senderIdVerificationStatus = sender != null ? sender.getIdVerificationStatus() : null;
 
 
+        // Standalone stickers cannot be edited; snapshots remain ordinary text/attachments.
         // Reactions are intentionally not mapped for history response per requirement
         return new MessageResponseDTO(
                 id,

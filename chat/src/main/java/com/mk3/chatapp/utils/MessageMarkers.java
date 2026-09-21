@@ -21,10 +21,17 @@ import java.util.regex.Pattern;
  */
 public final class MessageMarkers {
 
-    // Same as URL_REGEX in messageMarkers.ts; UNICODE_CHARACTER_CLASS aligns
-    // Java's \s with the JS whitespace class.
+    // Preserve the legacy interpretation used by advertising validation/pricing.
     private static final Pattern URL_PATTERN =
             Pattern.compile("https?://\\S+", Pattern.UNICODE_CHARACTER_CLASS);
+
+    // ECMAScript's exact whitespace set: Java's Unicode whitespace differs for
+    // FEFF, NEL, and some control characters. Share this URL grammar with the
+    // inline emoji scanner so limits and entitlement checks agree with chat UI.
+    private static final String CHAT_WHITESPACE = "\t\n\u000B\f\r \u00A0\u1680"
+            + "\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200A"
+            + "\u2028\u2029\u202F\u205F\u3000\uFEFF";
+    static final Pattern CHAT_URL_PATTERN = Pattern.compile("https?://[^" + CHAT_WHITESPACE + "]+");
 
     private MessageMarkers() {
     }
@@ -36,16 +43,25 @@ public final class MessageMarkers {
     }
 
     public static String strip(String text) {
+        return strip(text, false);
+    }
+
+    /** Chat uses the frontend's CR/CRLF normalization and ECMAScript whitespace. */
+    public static String stripChat(String text) {
+        return strip(text, true);
+    }
+
+    private static String strip(String text, boolean chat) {
         if (text == null) {
             return null;
         }
-        String[] lines = text.split("\n", -1);
+        String[] lines = text.split(chat ? "\\r\\n?|\\n" : "\n", -1);
         StringBuilder out = new StringBuilder(text.length());
         for (int i = 0; i < lines.length; i++) {
             if (i > 0) {
                 out.append('\n');
             }
-            stripLine(lines[i], out);
+            stripLine(lines[i], out, chat);
         }
         return out.toString();
     }
@@ -61,16 +77,16 @@ public final class MessageMarkers {
             return urls;
         }
         for (String line : text.split("\n", -1)) {
-            for (UrlRange range : findUrlRanges(line)) {
+            for (UrlRange range : findUrlRanges(line, false)) {
                 urls.add(line.substring(range.start(), range.end()));
             }
         }
         return urls;
     }
 
-    private static List<UrlRange> findUrlRanges(String line) {
+    private static List<UrlRange> findUrlRanges(String line, boolean chat) {
         List<UrlRange> ranges = new ArrayList<>();
-        Matcher matcher = URL_PATTERN.matcher(line);
+        Matcher matcher = (chat ? CHAT_URL_PATTERN : URL_PATTERN).matcher(line);
         while (matcher.find()) {
             int end = matcher.end();
             while (end > matcher.start() && line.charAt(end - 1) == '*') {
@@ -91,8 +107,9 @@ public final class MessageMarkers {
         return length == 1 || length >= 3;
     }
 
-    private static boolean isWhitespace(char c) {
-        return Character.isWhitespace(c) || Character.isSpaceChar(c);
+    private static boolean isWhitespace(char c, boolean chat) {
+        return chat ? CHAT_WHITESPACE.indexOf(c) >= 0
+                : Character.isWhitespace(c) || Character.isSpaceChar(c);
     }
 
     private static boolean closerExists(List<AsteriskRun> runs, int fromIdx, boolean boldPart) {
@@ -106,8 +123,8 @@ public final class MessageMarkers {
         return false;
     }
 
-    private static void stripLine(String line, StringBuilder out) {
-        List<UrlRange> urls = findUrlRanges(line);
+    private static void stripLine(String line, StringBuilder out, boolean chat) {
+        List<UrlRange> urls = findUrlRanges(line, chat);
         boolean[] inUrl = new boolean[line.length()];
         for (UrlRange url : urls) {
             for (int i = url.start(); i < url.end(); i++) {
@@ -122,8 +139,8 @@ public final class MessageMarkers {
                 while (j < line.length() && line.charAt(j) == '*' && !inUrl[j]) {
                     j++;
                 }
-                boolean canOpen = j < line.length() && !isWhitespace(line.charAt(j));
-                boolean canClose = i > 0 && !isWhitespace(line.charAt(i - 1));
+                boolean canOpen = j < line.length() && !isWhitespace(line.charAt(j), chat);
+                boolean canClose = i > 0 && !isWhitespace(line.charAt(i - 1), chat);
                 runs.add(new AsteriskRun(i, j - i, canOpen, canClose));
                 i = j;
             } else {

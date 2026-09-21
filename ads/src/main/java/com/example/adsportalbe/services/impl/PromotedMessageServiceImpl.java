@@ -117,6 +117,9 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         if (!message.getSender().getId().equals(user.getId())) {
             throw new RuntimeException("Access denied: You can only promote your own messages");
         }
+        if (message.getStickerId() != null) {
+            throw new IllegalArgumentException("Sticker messages cannot be promoted");
+        }
         if (message.getChatRoom().getType() == ChatRoomType.PRIVATE) {
             throw new IllegalArgumentException("Messages in private chat rooms cannot be promoted");
         }

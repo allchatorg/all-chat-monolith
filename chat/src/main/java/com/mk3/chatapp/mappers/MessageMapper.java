@@ -25,14 +25,24 @@ public interface MessageMapper {
     @Mapping(target = "senderProBadgeRevision", source = "message.sender.proBadgeRevision")
     @Mapping(target = "replyTo", expression = "java(toReplyInfoDTO(message.getReplyTo(), false))")
     @Mapping(target = "promotion", ignore = true)
+    @Mapping(target = "stickerId", expression = "java(visibleStickerId(message, false))")
     MessageResponseDTO toMessageResponseDTO(Message message);
 
     default MessageResponseDTO toMessageResponseDTO(Message message, boolean isStaff) {
         var dto = toMessageResponseDTO(message);
-        if (dto == null || message.getReplyTo() == null) {
+        if (dto == null) {
             return dto;
         }
-        return dto.withReplyTo(toReplyInfoDTO(message.getReplyTo(), isStaff));
+        return dto.withStickerId(visibleStickerId(message, isStaff))
+                .withReplyTo(toReplyInfoDTO(message.getReplyTo(), isStaff));
+    }
+
+    default String visibleStickerId(Message message, boolean isStaff) {
+        if (message == null || Boolean.TRUE.equals(message.getQuarantined())
+                || (Boolean.TRUE.equals(message.getDeleted()) && !isStaff)) {
+            return null;
+        }
+        return message.getStickerId();
     }
 
     default ReplyInfoDTO toReplyInfoDTO(Message parent, boolean isStaff) {
@@ -54,6 +64,7 @@ public interface MessageMapper {
                 hasAttachment,
                 attachmentName,
                 parent.getSender().isProBadgeVisible(),
-                parent.getSender().getProBadgeRevision());
+                parent.getSender().getProBadgeRevision(),
+                hideContent ? null : parent.getStickerId());
     }
 }

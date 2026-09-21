@@ -17,7 +17,7 @@ import com.mk3.chatapp.repositories.MessageRepository;
 import com.mk3.chatapp.repositories.UserChatRoomRepository;
 import com.mk3.chatapp.services.*;
 import com.mk3.chatapp.specifications.MessageSpecification;
-import com.mk3.chatapp.utils.MessageMarkers;
+import com.mk3.chatapp.utils.ChatMessageContent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,9 +37,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MessagesServiceImpl implements MessagesService {
     public static final int MAX_LENGTH = 500;
-    // Hard ceiling on raw stored content: the editor wraps each styled run in at
-    // most 6 marker chars and needs >=1 visible char inside each group and
-    // between groups, so raw <= 4 * visible for any legitimate message.
+    // Separate storage ceiling: formatting and canonical inline emoji markers
+    // can occupy more characters than their visible message content.
     public static final int MAX_RAW_LENGTH = 4 * MAX_LENGTH;
     private final MessageRepository messageRepository;
 
@@ -52,6 +51,7 @@ public class MessagesServiceImpl implements MessagesService {
     private final ChatRoomService chatRoomService;
     private final UserChatRoomRepository userChatRoomRepository;
     private final MessagePromotionEnrichmentService messagePromotionEnrichmentService;
+    private final ProStickerService proStickerService;
 
     /**
      * Validates message content when saving a new message.
@@ -67,7 +67,7 @@ public class MessagesServiceImpl implements MessagesService {
                     "Message content exceeds maximum raw length of " + MAX_RAW_LENGTH + " characters");
         }
 
-        if (MessageMarkers.strip(content).length() > maxLength) {
+        if (ChatMessageContent.plainText(content).length() > maxLength) {
             throw new IllegalArgumentException(
                     "Message content exceeds maximum length of " + maxLength + " characters");
         }
@@ -93,7 +93,7 @@ public class MessagesServiceImpl implements MessagesService {
                         "Message content exceeds maximum raw length of " + MAX_RAW_LENGTH + " characters");
             }
 
-            if (MessageMarkers.strip(content).length() > maxLength) {
+            if (ChatMessageContent.plainText(content).length() > maxLength) {
                 throw new IllegalArgumentException(
                         "Message content exceeds maximum length of " + maxLength + " characters");
             }
@@ -134,7 +134,8 @@ public class MessagesServiceImpl implements MessagesService {
                 messageResponseDTO.replyTo(),
                 messageResponseDTO.promotion(),
                 messageResponseDTO.senderProBadgeVisible(),
-                messageResponseDTO.senderProBadgeRevision());
+                messageResponseDTO.senderProBadgeRevision(),
+                messageResponseDTO.stickerId());
     }
 
     @Override
@@ -179,10 +180,22 @@ public class MessagesServiceImpl implements MessagesService {
 
         chatRoomService.validateRoomIsNotArchived(chatRoom, "send messages");
         String content = messageRequestDTO.content() == null ? "" : messageRequestDTO.content();
-        validateMessageForSave(content, MAX_LENGTH, messageRequestDTO.attachments());
+        if (messageRequestDTO.stickerId() != null) {
+            if (!content.isEmpty() || (messageRequestDTO.attachments() != null
+                    && !messageRequestDTO.attachments().isEmpty())) {
+                throw new IllegalArgumentException("Sticker messages cannot include text or attachments");
+            }
+            proStickerService.validateForSend(messageRequestDTO.stickerId(), user.getId());
+        } else {
+            validateMessageForSave(content, MAX_LENGTH, messageRequestDTO.attachments());
+            if (content.contains(":allchat:")) {
+                proStickerService.validateInlineEmojis(content, null, user.getId());
+            }
+        }
 
         var message = Message.builder()
                 .content(content)
+                .stickerId(messageRequestDTO.stickerId())
                 .sender(user)
                 .chatRoom(chatRoom)
                 .replyTo(resolveReplyParent(messageRequestDTO.replyToMessageId(), chatRoom))
@@ -495,6 +508,9 @@ public class MessagesServiceImpl implements MessagesService {
         assertMessageCanBeEdited(message);
         String updatedContent = content == null ? "" : content;
         validateMessageForEdit(updatedContent, MAX_LENGTH, message.getAttachments().size());
+        if (updatedContent.contains(":allchat:")) {
+            proStickerService.validateInlineEmojis(updatedContent, message.getContent(), user.getId());
+        }
 
         messageEditHistoryService.save(message.getContent(), message, new ArrayList<>(message.getAttachments()), user);
         message.setContent(updatedContent);
@@ -582,6 +598,9 @@ public class MessagesServiceImpl implements MessagesService {
     private void assertMessageCanBeEdited(Message message) {
         if (Boolean.TRUE.equals(message.getDeleted()) || Boolean.TRUE.equals(message.getQuarantined())) {
             throw new IllegalArgumentException("Removed messages cannot be edited");
+        }
+        if (message.getStickerId() != null) {
+            throw new IllegalArgumentException("Sticker messages cannot be edited");
         }
     }
 

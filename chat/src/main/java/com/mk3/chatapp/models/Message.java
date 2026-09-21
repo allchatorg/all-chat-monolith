@@ -1,7 +1,7 @@
 package com.mk3.chatapp.models;
 
 import com.mk3.chatapp.models.identity.User;
-import com.mk3.chatapp.utils.MessageMarkers;
+import com.mk3.chatapp.utils.ChatMessageContent;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
@@ -34,7 +34,12 @@ public class Message extends Base {
     @Column(nullable = false, length = 2000)
     private String content;
 
-    // Marker-stripped copy of content kept for LIKE search; null on rows
+    /** Canonical local catalog ID for a standalone sticker; never an image URL. */
+    @Column(name = "sticker_id", length = 32)
+    private String stickerId;
+
+    // Chat text with formatting stripped and each inline emoji represented by
+    // one placeholder, kept for LIKE search; null on rows
     // written before the column existed (search falls back to content).
     @Column(name = "content_plain", length = 500)
     private String contentPlain;
@@ -42,7 +47,7 @@ public class Message extends Base {
     @PrePersist
     @PreUpdate
     private void syncContentPlain() {
-        contentPlain = MessageMarkers.strip(content);
+        contentPlain = ChatMessageContent.plainText(content);
     }
 
     @ManyToOne

@@ -119,6 +119,32 @@ class ReactionPersistenceTest {
     }
 
     @Test
+    void standaloneStickerAndReplySurviveSeparateTransactionReloads() {
+        Long stickerMessageId = transactions.execute(status -> {
+            var message = Message.builder().chatRoom(entityManager.find(ChatRoom.class, roomId))
+                    .sender(entityManager.find(User.class, members.getFirst().getId()))
+                    .content("").stickerId("pepe").build();
+            entityManager.persist(message);
+            return message.getId();
+        });
+        Long replyId = transactions.execute(status -> {
+            var parent = messages.findById(stickerMessageId).orElseThrow();
+            assertThat(parent.getStickerId()).isEqualTo("pepe");
+            assertThat(parent.getContent()).isEmpty();
+            var reply = Message.builder().chatRoom(parent.getChatRoom()).sender(parent.getSender())
+                    .content("reply to sticker").replyTo(parent).build();
+            entityManager.persist(reply);
+            return reply.getId();
+        });
+        transactions.executeWithoutResult(status -> {
+            var reply = messages.findById(replyId).orElseThrow();
+            assertThat(reply.getStickerId()).isNull();
+            assertThat(reply.getReplyTo().getStickerId()).isEqualTo("pepe");
+            assertThat(messages.findById(messageId).orElseThrow().getStickerId()).isNull();
+        });
+    }
+
+    @Test
     void concurrentFirstAddsCreateOneReactionAndOneMembershipPerUser() throws Exception {
         // Two requests per user race for the initially absent reaction row.
         runConcurrently(12, index -> transactions.executeWithoutResult(status ->
