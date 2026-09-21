@@ -29,5 +29,11 @@ public record UserDTO(
         List<TagDTO> blurredContentTags,
         TimeFormat timeFormatSetting,
         String timeZone,
-        List<UserMinimalDTO> blockedUsers) {
+        List<UserMinimalDTO> blockedUsers,
+        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+        Boolean proActive,
+        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+        Boolean showProBadge,
+        boolean proBadgeVisible,
+        long proBadgeRevision) {
 }

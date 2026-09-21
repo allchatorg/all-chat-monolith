@@ -8,6 +8,8 @@ public record ReplyInfoDTO(
         String content,
         boolean deleted,
         boolean hasAttachment,
-        String attachmentName
+        String attachmentName,
+        boolean senderProBadgeVisible,
+        long senderProBadgeRevision
 ) {
 }

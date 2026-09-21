@@ -133,7 +133,9 @@ public class MessagesServiceImpl implements MessagesService {
                 filteredAttachments,
                 messageResponseDTO.reactions(),
                 messageResponseDTO.replyTo(),
-                messageResponseDTO.promotion());
+                messageResponseDTO.promotion(),
+                messageResponseDTO.senderProBadgeVisible(),
+                messageResponseDTO.senderProBadgeRevision());
     }
 
     @Override

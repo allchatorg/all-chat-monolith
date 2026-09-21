@@ -8,6 +8,8 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
+      # Production data (including subscription ownership) must survive restarts.
+      # Apply the documented additive migrations before starting this profile.
       ddl-auto: create-drop
     show-sql: false
     properties:
@@ -56,9 +58,13 @@ spring:
           jobStore:
             driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
     jdbc:
-      initialize-schema: always
+      initialize-schema: never
 
 app:
+  pro:
+    enabled: ${ALLCHAT_PRO_ENABLED:false}
+    live-enabled: ${ALLCHAT_PRO_LIVE_ENABLED:false}
+    yearly-billing-enabled: ${ALLCHAT_PRO_YEARLY_BILLING_ENABLED:false}
   FRONT_END:
     URL: ${APP_FRONTEND_URL}
   admin:
@@ -81,6 +87,12 @@ community-night:
 
 stripe:
   api-key: ${STRIPE_API_KEY}
+  pro:
+    monthly-price-id: ${STRIPE_PRO_MONTHLY_PRICE_ID:}
+    yearly-price-id: ${STRIPE_PRO_YEARLY_PRICE_ID:}
+    billing-portal-configuration-id: ${STRIPE_PRO_BILLING_PORTAL_CONFIGURATION_ID:}
+    switch-portal-configuration-id: ${STRIPE_PRO_SWITCH_PORTAL_CONFIGURATION_ID:}
+    webhook-secret: ${STRIPE_PRO_WEBHOOK_SECRET:}
   # --- chat module: Stripe Identity (ID/age verification) ---
   secret-key: ${STRIPE_SECRET_KEY}
   identity:

@@ -61,7 +61,7 @@ public class ReactionServiceImpl implements ReactionService {
         reaction.getUsers().add(user);
         reactionRepository.save(reaction);
 
-        broadcastReaction(reaction, ReactionType.ADD, user.getId(), user.getUsername());
+        broadcastReaction(reaction, ReactionType.ADD, user);
     }
 
     @Transactional
@@ -84,7 +84,7 @@ public class ReactionServiceImpl implements ReactionService {
         } else {
             reactionRepository.save(reaction);
         }
-        broadcastReaction(reaction, ReactionType.REMOVE, user.getId(), user.getUsername());
+        broadcastReaction(reaction, ReactionType.REMOVE, user);
     }
 
     @Override
@@ -134,7 +134,7 @@ public class ReactionServiceImpl implements ReactionService {
     }
 
     private ReactionSocketResponse createReactionSocketResponse(Reaction reaction, ReactionType responseType,
-                                                                Long userId, String username) {
+                                                                User user) {
         return new ReactionSocketResponse(
                 reaction.getId(),
                 reaction.getMessage().getChatRoom().getId(),
@@ -142,12 +142,12 @@ public class ReactionServiceImpl implements ReactionService {
                 responseType,
                 reaction.getEmoji(),
                 reaction.getEmojiId(),
-                new UserMinimalDTO(userId, username));
+                new UserMinimalDTO(user.getId(), user.getApplicationUsername(), user.isProBadgeVisible(), user.getProBadgeRevision()));
     }
 
-    private void broadcastReaction(Reaction reaction, ReactionType responseType, Long userId, String username) {
+    private void broadcastReaction(Reaction reaction, ReactionType responseType, User user) {
         var chatRoom = reaction.getMessage().getChatRoom();
-        var socketResponse = createReactionSocketResponse(reaction, responseType, userId, username);
+        var socketResponse = createReactionSocketResponse(reaction, responseType, user);
 
         // Private rooms have a null name, so they can't be addressed via the
         // /topic/chat-room.{name} destination. Deliver the reaction to each

@@ -15,6 +15,7 @@ import com.mk3.chatapp.models.Tag;
 import com.mk3.chatapp.models.UserActionToken;
 import com.mk3.chatapp.models.UsernameHistory;
 import com.mk3.chatapp.models.identity.User;
+import com.mk3.chatapp.pro.ProBillingService;
 import com.mk3.chatapp.repositories.BanRepository;
 import com.mk3.chatapp.repositories.UserRepository;
 import com.mk3.chatapp.repositories.UsernameHistoryRepository;
@@ -62,6 +63,7 @@ public class UserServiceImpl implements UserService {
     private final SmsSenderService smsSenderService;
     private final PhoneNumberCleanupSchedulingService phoneNumberCleanupSchedulingService;
     private final GeolocationService geolocationService;
+    private final ProBillingService proBillingService;
 
     @Override
     public void changePassword(ChangePasswordRequestDTO request, Principal connectedUser) {
@@ -237,7 +239,7 @@ public class UserServiceImpl implements UserService {
 
         userActionToken.setUsed(true);
         tokenService.save(userActionToken);
-        return userMapper.toDto(save(user));
+        return userMapper.toOwnerDto(save(user));
     }
 
     @Override
@@ -276,7 +278,7 @@ public class UserServiceImpl implements UserService {
         user.setVerified(true);
         userActionToken.setUsed(true);
         tokenService.save(userActionToken);
-        return userMapper.toDto(save(user));
+        return userMapper.toOwnerDto(save(user));
     }
 
     @Override
@@ -330,7 +332,7 @@ public class UserServiceImpl implements UserService {
         user.setPhoneNumberVerificationDate(Instant.now());
         userActionToken.setUsed(true);
         tokenService.save(userActionToken);
-        return userMapper.toDto(save(user));
+        return userMapper.toOwnerDto(save(user));
     }
 
     @Override
@@ -367,7 +369,7 @@ public class UserServiceImpl implements UserService {
         usernameHistoryRepository.save(history);
 
         user.setUsername(username);
-        return userMapper.toDto(save(user));
+        return userMapper.toOwnerDto(save(user));
     }
 
     @Override
@@ -420,7 +422,7 @@ public class UserServiceImpl implements UserService {
         user.setVerified(true);
         token.setUsed(true);
         tokenService.save(token);
-        return userMapper.toDto(save(user));
+        return userMapper.toOwnerDto(save(user));
     }
 
     @Override
@@ -448,7 +450,7 @@ public class UserServiceImpl implements UserService {
     public UserDTO getUserInfo(Principal connectedUser) {
         var user = getPrincipal(connectedUser);
         user.setLastSeen(Instant.now());
-        return userMapper.toDto(save(user));
+        return userMapper.toOwnerDto(save(user));
     }
 
     @Override
@@ -480,6 +482,9 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @Override
     public void deleteAccount(User user, DeleteAccountRequest deleteAccountRequest) {
+        user = userRepository.findByIdForUpdate(user.getId()).orElseThrow();
+        proBillingService.cancelForAccountDeletion(user);
+        user.setProPaidThrough(null);
         user.setDeleted(true);
         user.setEmail(null);
         user.getUserChatRooms().clear();

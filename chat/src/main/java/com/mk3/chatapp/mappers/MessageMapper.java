@@ -21,6 +21,8 @@ public interface MessageMapper {
     @Mapping(target = "color", source = "message.sender.displayColor")
     @Mapping(target = "senderCountryCode", source = "message.sender.countryCode")
     @Mapping(target = "senderIdVerificationStatus", source = "message.sender.idVerificationStatus")
+    @Mapping(target = "senderProBadgeVisible", source = "message.sender.proBadgeVisible")
+    @Mapping(target = "senderProBadgeRevision", source = "message.sender.proBadgeRevision")
     @Mapping(target = "replyTo", expression = "java(toReplyInfoDTO(message.getReplyTo(), false))")
     @Mapping(target = "promotion", ignore = true)
     MessageResponseDTO toMessageResponseDTO(Message message);
@@ -50,7 +52,8 @@ public interface MessageMapper {
                 hideContent ? null : parent.getContent(),
                 deleted || quarantined,
                 hasAttachment,
-                attachmentName);
+                attachmentName,
+                parent.getSender().isProBadgeVisible(),
+                parent.getSender().getProBadgeRevision());
     }
 }
-

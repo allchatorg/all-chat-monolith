@@ -1,13 +1,15 @@
 spring:
   jpa:
     hibernate:
-      # WARNING: create-drop wipes the database on every restart/redeploy —
-      # switch back to update once the schema reset is done
-      ddl-auto: create-drop
+      # Apply docs/sql/allchat-pro.sql before deploying. Never recreate billing data.
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
         format_sql: false
+  quartz:
+    jdbc:
+      initialize-schema: never
 
 logging:
   level:

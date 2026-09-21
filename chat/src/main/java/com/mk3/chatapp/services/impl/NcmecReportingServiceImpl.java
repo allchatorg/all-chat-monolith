@@ -408,7 +408,7 @@ public class NcmecReportingServiceImpl implements NcmecReportingService {
     // ── InternetDetails ──────────────────────────────────────────────────
 
     private InternetDetails buildInternetDetails(Message message) {
-        ChatImIncident chatImIncident = ChatImIncident.builder().chatClient("AllChat")
+        ChatImIncident chatImIncident = ChatImIncident.builder().chatClient("allchat")
                 .chatRoomName(message.getChatRoom().getName()).content(message.getContent()).build();
 
         return InternetDetails.builder().chatImIncident(chatImIncident).build();

@@ -26,6 +26,8 @@ import java.util.List;
 @Entity
 @Table(name = "chat_user")
 public class User extends Base implements UserDetails {
+    // Preserve compatibility with User objects in existing JDK-serialized Redis sessions.
+    private static final long serialVersionUID = 4460179086628819277L;
     @Id
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -108,8 +110,34 @@ public class User extends Base implements UserDetails {
     @Column(name = "last_name")
     private String lastName;
 
-    @Column(name = "stripe_customer_id")
+    @Column(name = "stripe_customer_id", updatable = false)
     private String stripeCustomerId;
+
+    /** Paid entitlement is independent of account roles and the public badge preference. */
+    @JsonIgnore
+    @Column(name = "pro_paid_through", updatable = false)
+    private Instant proPaidThrough;
+
+    @JsonIgnore
+    @Builder.Default
+    @Column(name = "show_pro_badge", nullable = false, updatable = false)
+    private boolean showProBadge = true;
+
+    @Column(name = "pro_badge_revision", nullable = false, updatable = false)
+    private long proBadgeRevision;
+
+    @JsonIgnore
+    @Column(name = "pro_badge_last_published_visible", nullable = false, updatable = false)
+    private boolean proBadgeLastPublishedVisible;
+
+    @JsonIgnore
+    public boolean isProActive() {
+        return !Boolean.TRUE.equals(getDeleted()) && proPaidThrough != null && proPaidThrough.isAfter(Instant.now());
+    }
+
+    public boolean isProBadgeVisible() {
+        return showProBadge && isProActive();
+    }
 
     @Column(name = "email_verified")
     private boolean emailVerified;

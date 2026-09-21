@@ -6,6 +6,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -30,6 +32,30 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
     boolean existsByUsername(String username);
 
     Optional<User> findById(Long id);
+
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
+    @Query("update User u set u.proPaidThrough = :paidThrough, u.showProBadge = :showBadge, " +
+            "u.proBadgeRevision = :revision, u.proBadgeLastPublishedVisible = :visible where u.id = :id")
+    int updateProState(@Param("id") Long id, @Param("paidThrough") Instant paidThrough,
+                       @Param("showBadge") boolean showBadge, @Param("revision") long revision,
+                       @Param("visible") boolean visible);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where u.id = :id")
+    Optional<User> findByIdForUpdate(@Param("id") Long id);
+
+    Optional<User> findByStripeCustomerId(String stripeCustomerId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("update User u set u.stripeCustomerId = :customerId where u.id = :id")
+    int updateStripeCustomerId(@Param("id") Long id, @Param("customerId") String customerId);
+
+    List<User> findByIdIn(java.util.Collection<Long> ids);
+
+    @Query("select u.id from User u where u.id > :afterId and u.proBadgeLastPublishedVisible = true " +
+            "and (u.proPaidThrough <= :now or u.proPaidThrough is null or u.deleted = true) order by u.id")
+    List<Long> findExpiredProBadgeUserIds(@Param("now") Instant now, @Param("afterId") Long afterId,
+                                         org.springframework.data.domain.Pageable pageable);
 
     @NonNull
     List<User> findAll(Specification<User> spec);

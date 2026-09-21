@@ -65,7 +65,9 @@ public class MessageHistoryTransformerImpl implements MessageHistoryTransformer 
                 attachments,
                 List.of(),
                 null,
-                null
+                null,
+                sender != null && sender.isProBadgeVisible(),
+                sender != null ? sender.getProBadgeRevision() : 0L
         );
     }
 

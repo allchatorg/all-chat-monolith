@@ -435,7 +435,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var token = sessionManagementService.establishAndLogAuthenticatedSession(auth, request);
 
         return new ClaimAccountResponseDTO(
-                userMapper.toDto(savedUser),
+                userMapper.toOwnerDto(savedUser),
                 new SessionTokenDTO(token));
     }
 

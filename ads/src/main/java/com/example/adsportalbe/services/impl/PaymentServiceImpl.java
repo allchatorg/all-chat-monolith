@@ -1,7 +1,7 @@
 package com.example.adsportalbe.services.impl;
 
 import com.example.adsportalbe.dto.payment.PaymentMethodDto;
-import com.example.adsportalbe.repositories.AdsUserRepository;
+import com.mk3.chatapp.services.StripeCustomerService;
 import com.example.adsportalbe.services.PaymentService;
 import com.mk3.chatapp.models.identity.User;
 import com.stripe.Stripe;
@@ -22,7 +22,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
 
-    private final AdsUserRepository userRepository;
+    private final StripeCustomerService stripeCustomerService;
     @Value("${STRIPE_API_KEY}")
     private String stripeApiKey;
 
@@ -33,30 +33,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public String createCustomer(User user) throws StripeException {
-        // The @AuthenticationPrincipal is a snapshot serialized into the Spring
-        // Session (Redis) at login time, so its stripeCustomerId is stale (usually
-        // null) for the whole session. Re-read the persisted user so we reuse the
-        // same Stripe customer across requests instead of creating a new one each
-        // time (which would orphan saved cards and authorizations).
-        User dbUser = userRepository.findById(user.getId()).orElse(user);
-
-        if (dbUser.getStripeCustomerId() != null) {
-            // Keep the in-memory principal in sync for the rest of this request.
-            user.setStripeCustomerId(dbUser.getStripeCustomerId());
-            return dbUser.getStripeCustomerId();
-        }
-
-        CustomerCreateParams params = CustomerCreateParams.builder()
-                .setEmail(dbUser.getEmail())
-                .setName(dbUser.getFirstName() + " " + dbUser.getLastName())
-                .build();
-
-        Customer customer = Customer.create(params);
-        dbUser.setStripeCustomerId(customer.getId());
-        userRepository.save(dbUser); // Persist connection
-
-        user.setStripeCustomerId(customer.getId());
-        return customer.getId();
+        return stripeCustomerService.getOrCreate(user);
     }
 
     @Override

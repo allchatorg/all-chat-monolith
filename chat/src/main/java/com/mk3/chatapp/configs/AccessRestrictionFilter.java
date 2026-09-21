@@ -41,6 +41,10 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
             Map.entry("/health", Set.of("GET")),
             Map.entry("/ws/**", Set.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")),
             Map.entry("/api/v1/users/me", Set.of("GET")),
+            Map.entry("/api/v1/pro/subscription", Set.of("GET")),
+            Map.entry("/api/v1/pro/cancel", Set.of("POST")),
+            Map.entry("/api/v1/pro/portal", Set.of("POST")),
+            Map.entry("/api/v1/pro/scheduled-plan-change", Set.of("DELETE")),
             Map.entry("/api/v1/users/send-email-verification", Set.of("POST")),
             Map.entry("/api/v1/users/verify", Set.of("PATCH")),
             Map.entry("/api/v1/users/send-phone-verification", Set.of("POST")),
@@ -62,6 +66,10 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
     private static final Map<String, Set<String>> BANNED_USER_ALLOWED_ENDPOINTS = Map.of(
             "/api/v1/ban-appeals/**", Set.of("GET", "POST"),
             "/api/v1/users/me", Set.of("GET"),
+            "/api/v1/pro/subscription", Set.of("GET"),
+            "/api/v1/pro/cancel", Set.of("POST"),
+            "/api/v1/pro/portal", Set.of("POST"),
+            "/api/v1/pro/scheduled-plan-change", Set.of("DELETE"),
             "/api/v1/auth/ping", Set.of("GET"),
             "/api/v1/auth/logout", Set.of("POST"),
             "/api/v1/auth/login", Set.of("POST")
@@ -72,6 +80,12 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
     private final BanMapper banMapper;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        // Authentication for this exact endpoint is the Stripe signature, never the caller's IP/session.
+        return "POST".equals(request.getMethod()) && "/api/v1/pro/webhook".equals(request.getRequestURI());
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,

@@ -243,6 +243,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return true;
         }
 
+        if ("POST".equalsIgnoreCase(method) && "/api/v1/pro/webhook".equals(uri)) return true;
+
         return !uri.startsWith(API_PREFIX);
     }
 
