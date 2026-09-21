@@ -12,7 +12,6 @@ public record MessageEditHistoryDTO(
         Long senderId,
         Long senderUsername,
         String createdAt,
-        List<AttachmentDTO> attachments,
-        String stickerId
+        List<AttachmentDTO> attachments
 ) {
 }

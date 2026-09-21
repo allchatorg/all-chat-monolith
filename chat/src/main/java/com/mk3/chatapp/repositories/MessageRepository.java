@@ -3,6 +3,8 @@ package com.mk3.chatapp.repositories;
 import com.mk3.chatapp.models.Message;
 import com.mk3.chatapp.models.identity.User;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +15,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MessageRepository extends JpaRepository<Message, Long>, JpaSpecificationExecutor<Message> {
+
+    // A parent row exists even for the first reaction, so concurrent writers
+    // cannot both create the same (message, emoji) reaction.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT m FROM Message m WHERE m.id = :messageId")
+    Optional<Message> findByIdForReactionUpdate(@Param("messageId") Long messageId);
 
     @Query("""
             SELECT m FROM Message m

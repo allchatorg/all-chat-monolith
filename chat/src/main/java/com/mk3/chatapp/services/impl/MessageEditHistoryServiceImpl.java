@@ -22,7 +22,6 @@ public class MessageEditHistoryServiceImpl implements MessageEditHistoryService 
                                    User editedBy) {
         MessageEditHistory messageEditHistory = MessageEditHistory.builder()
                 .content(previousContent)
-                .stickerId(message.getStickerId())
                 .message(message)
                 .attachments(attachmentsAtTime)
                 .editedBy(editedBy)

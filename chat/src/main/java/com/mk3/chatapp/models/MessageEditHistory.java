@@ -27,9 +27,6 @@ public class MessageEditHistory extends Base {
     @Column(nullable = false, length = 2000)
     private String content;
 
-    @Column(name = "sticker_id", length = 32)
-    private String stickerId;
-
     @ManyToOne
     @JoinColumn(name = "edited_by_user_id")
     private User editedBy;

@@ -1,85 +1,86 @@
-# allchat Pro stickers
+# allchat Pro character reactions
 
-Active allchat Pro subscribers can send one catalog sticker with a message in
-public rooms and in private conversations they can already access. Everyone can
-view stickers already sent. Existing room permissions, moderation, text limits,
-and attachment checks continue to apply.
+allchat Pro includes **17 exclusive character reactions** attached to messages.
+The reaction picker has **Emoji** and **allchat Pro** tabs, with search, character
+previews and locked states. Everyone can see the character images, counts and
+reacting users. An active subscriber can add a character reaction or click an
+existing one; anyone can remove their own reaction after their subscription ends.
+The existing transparent artwork is bundled with the frontend.
 
 ## API contract
 
-`POST /api/v1/chatting/messages` accepts an optional `stickerId` alongside the
-existing fields:
+The existing `PATCH /api/v1/chat-rooms/message-reactions` (add) and
+`DELETE /api/v1/chat-rooms/message-reactions` (remove) endpoints accept the same
+request fields. A character uses the same reserved token in both identity fields:
 
 ```json
 {
-  "chatRoomId": 5,
-  "content": "",
-  "attachments": [],
-  "replyToMessageId": null,
-  "stickerId": "pepe"
+  "messageId": 123,
+  "emoji": "allchat:pepe",
+  "emojiId": "allchat:pepe"
 }
 ```
 
-Text and attachments may accompany a sticker. For sticker-only messages, omitted
-or null `content` becomes an empty string; omitted or null `attachments` is also
-accepted. A message without text, attachments, or a sticker is rejected.
-
-Supported IDs are `wojak`, `soyjak`, `chud`, `chad-1`, `chad-2`, `virgin`,
+Supported suffixes are `wojak`, `soyjak`, `chud`, `chad-1`, `chad-2`, `virgin`,
 `doomer`, `coomer`, `bloomer`, `zoomer`, `npc`, `grug`, `pepe`, `apu-apustaja`,
-`honkler`, `spurdo`, and `gondola`. IDs are exact and case-sensitive; arbitrary
-image URLs and unknown IDs return HTTP 400.
+`honkler`, `spurdo`, and `gondola`. If either field starts with `allchat:`, both
+must be exactly equal and identify a known character; otherwise HTTP 400 is
+returned. Unicode emoji keep their existing identities and do not require Pro.
 
-Each sticker send reads the current billing projection directly from the
-database. Paid-through must be in the future, and the account must be neither
-deleted nor banned. Missing or expired entitlement returns HTTP 403. Badge
-visibility and cached client/profile flags do not grant or remove entitlement.
+Every custom addition checks the current billing projection in the database:
+paid-through must be in the future and the account must be neither deleted nor
+banned. Missing or expired entitlement returns HTTP 403. Hidden badges and stale
+client/session flags do not affect entitlement. Removal validates the identity
+but never requires active Pro.
 
-Message HTTP responses, WebSocket events, paginated history, edit history, and
-reply previews include the nullable `stickerId`. Reply previews hide it whenever
-the existing moderation rules hide the parent content. The frontend resolves
-catalog IDs to its bundled transparent assets.
+`GET /api/v1/chat-rooms/messages/{messageId}/reactions/{emoji}?limit=5` accepts a
+URI-encoded identity, e.g. `allchat%3Apepe`. The optional nonnegative limit applies
+only to returned users; `usersCount` remains the full count and persisted
+membership is never changed by a detail read. Existing message summaries and
+reaction WebSocket payloads carry both tokens unchanged. The frontend resolves
+only its known local catalog entries to image assets.
 
-The ads portal's promotion detail and listing responses expose the same catalog
-value as `messageStickerId`, allowing owners and moderators to review promoted
-sticker-only messages. Report cases, deletion audit records, and conversation
-previews inherit `stickerId` through their embedded message response.
+## Permissions and consistency
 
-Editing changes the caption and preserves the original sticker; it cannot add or
-replace a sticker. A sender may edit an existing caption after Pro expires.
-Previous captions and sticker IDs are archived together. Removing the last
-attachment remains valid when a sticker is present. Deleted or quarantined
-messages cannot be edited.
+Mutation and detail reads validate public room access or private conversation
+membership and reject deleted/quarantined messages. Archived rooms reject
+mutations. Private additions also preserve the existing staff-only and blocked
+conversation write restrictions; members can still read or remove reactions.
 
-## Deployment
+Both add and remove lock the message row in the database before inspecting
+reaction membership, including the first addition when a reaction row does not
+exist. Repeated requests are idempotent, and activity counters/socket events are
+updated only when membership actually changes. Removed users are matched by ID.
 
-For an existing PostgreSQL installation, apply `docs/sql/pro-stickers.sql` after
-the existing `docs/sql/allchat-pro.sql` migration and before starting this backend
-with schema validation enabled. It adds nullable `sticker_id varchar(32)` columns
-to `messages` and `message_edit_history`; old messages remain unchanged. The SQL
-is idempotent. Deploy the backend before enabling the matching frontend picker.
+Activity and WebSocket updates run after a successful commit, with recipient IDs
+and payloads captured inside the transaction. Private updates use member queues;
+public updates use the room topic. Delivery failures are logged without undoing
+saved reactions. Redis/socket delivery remains best effort: retries and ordering
+across concurrent commits require an outbox/versioned event design beyond the
+existing API. Reloading messages uses the authoritative database state.
 
-Development schemas created by Hibernate pick up the new columns automatically.
-The feature uses the existing Pro billing configuration and needs no new secrets.
+## Deployment and verification
 
-## Verification
+No new database columns or migration are required. The earlier standalone
+sticker feature was not deployed; its message/history/promotion fields and
+unused SQL migration have been removed. Existing Pro billing setup is reused.
 
-Run chat tests and compile the full backend:
+Run the complete reactor tests and compile:
 
 ```sh
-./mvnw -pl chat,ads -am test
+./mvnw test
 ./mvnw -DskipTests compile
 ```
 
-If the local JDK cannot attach Mockito dynamically, pass its startup agent using
-the version managed by this project's Spring Boot dependencies:
+If the JDK cannot attach Mockito dynamically, append
+`-DargLine="-javaagent:$HOME/.m2/repository/org/mockito/mockito-core/5.17.0/mockito-core-5.17.0.jar"`
+to the test command.
 
-```sh
-./mvnw -pl chat,ads -am test \
-  -DargLine="-javaagent:$HOME/.m2/repository/org/mockito/mockito-core/5.17.0/mockito-core-5.17.0.jar"
-```
+Coverage includes all 17 identities, Unicode emoji, free/expired/hidden-badge
+entitlement, stale cached state, invalid tokens, access checks, private delivery,
+idempotency and edit safety. H2/JPA tests exercise concurrent first additions,
+duplicate removals, add/remove cycles, membership persistence after limited
+previews, current database entitlement, transaction rollback and delivery failure.
 
-Coverage includes all 17 IDs, hidden badges, free and expired subscriptions,
-stale cached entitlement, both room types, invalid IDs, caption editing,
-attachment removal, edit snapshots, generated DTO mappings, and reply redaction.
-Promotion tests verify owner/admin detail access, list previews, JSON field names,
-and compatibility with ordinary messages that have no sticker.
+The database integration suite runs against H2; it does not replace a production
+PostgreSQL concurrency/load check.

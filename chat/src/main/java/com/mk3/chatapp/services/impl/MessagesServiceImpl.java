@@ -52,19 +52,13 @@ public class MessagesServiceImpl implements MessagesService {
     private final ChatRoomService chatRoomService;
     private final UserChatRoomRepository userChatRoomRepository;
     private final MessagePromotionEnrichmentService messagePromotionEnrichmentService;
-    private final ProStickerService proStickerService;
 
     /**
      * Validates message content when saving a new message.
-     * A message requires text, an attachment, or a validated sticker.
+     * A message requires text or an attachment.
      */
     public static void validateMessageForSave(String content, int maxLength, List<AttachmentDTO> attachments) {
-        validateMessageForSave(content, maxLength, attachments, false);
-    }
-
-    private static void validateMessageForSave(String content, int maxLength, List<AttachmentDTO> attachments,
-                                               boolean hasSticker) {
-        if (content == null || content.isEmpty() && (attachments == null || attachments.isEmpty()) && !hasSticker) {
+        if (content == null || content.isEmpty() && (attachments == null || attachments.isEmpty())) {
             throw new IllegalArgumentException("Message content cannot be null or empty");
         }
 
@@ -88,12 +82,7 @@ public class MessagesServiceImpl implements MessagesService {
      * Content can be empty if there are attachments.
      */
     public static void validateMessageForEdit(String content, int maxLength, int attachmentCount) {
-        validateMessageForEdit(content, maxLength, attachmentCount, false);
-    }
-
-    private static void validateMessageForEdit(String content, int maxLength, int attachmentCount,
-                                               boolean hasSticker) {
-        if (attachmentCount == 0 && !hasSticker && (content == null || content.isEmpty())) {
+        if (attachmentCount == 0 && (content == null || content.isEmpty())) {
             throw new IllegalArgumentException("Message content cannot be null or empty when there are no attachments");
         }
 
@@ -145,8 +134,7 @@ public class MessagesServiceImpl implements MessagesService {
                 messageResponseDTO.replyTo(),
                 messageResponseDTO.promotion(),
                 messageResponseDTO.senderProBadgeVisible(),
-                messageResponseDTO.senderProBadgeRevision(),
-                messageResponseDTO.stickerId());
+                messageResponseDTO.senderProBadgeRevision());
     }
 
     @Override
@@ -190,17 +178,11 @@ public class MessagesServiceImpl implements MessagesService {
         }
 
         chatRoomService.validateRoomIsNotArchived(chatRoom, "send messages");
-        // Every public and private message passes this validation, including direct API clients.
-        if (messageRequestDTO.stickerId() != null) {
-            proStickerService.validateForSend(messageRequestDTO.stickerId(), user.getId());
-        }
         String content = messageRequestDTO.content() == null ? "" : messageRequestDTO.content();
-        validateMessageForSave(content, MAX_LENGTH, messageRequestDTO.attachments(),
-                messageRequestDTO.stickerId() != null);
+        validateMessageForSave(content, MAX_LENGTH, messageRequestDTO.attachments());
 
         var message = Message.builder()
                 .content(content)
-                .stickerId(messageRequestDTO.stickerId())
                 .sender(user)
                 .chatRoom(chatRoom)
                 .replyTo(resolveReplyParent(messageRequestDTO.replyToMessageId(), chatRoom))
@@ -512,7 +494,7 @@ public class MessagesServiceImpl implements MessagesService {
 
         assertMessageCanBeEdited(message);
         String updatedContent = content == null ? "" : content;
-        validateMessageForEdit(updatedContent, MAX_LENGTH, message.getAttachments().size(), message.getStickerId() != null);
+        validateMessageForEdit(updatedContent, MAX_LENGTH, message.getAttachments().size());
 
         messageEditHistoryService.save(message.getContent(), message, new ArrayList<>(message.getAttachments()), user);
         message.setContent(updatedContent);
@@ -538,7 +520,7 @@ public class MessagesServiceImpl implements MessagesService {
         if (message.getAttachments().stream().noneMatch(attachment -> Objects.equals(attachment.getId(), attachmentId))) {
             throw new IllegalArgumentException("Attachment does not belong to this message");
         }
-        if (messageIsEmpty(message.getContent(), message.getAttachments().size() - 1, message.getStickerId())) {
+        if (messageIsEmpty(message.getContent(), message.getAttachments().size() - 1)) {
             throw new IllegalArgumentException(
                     "Message cannot be left empty after removing attachment");
         }
@@ -593,8 +575,8 @@ public class MessagesServiceImpl implements MessagesService {
         messageRepository.saveAll(messages);
     }
 
-    private boolean messageIsEmpty(String content, int attachmentCount, String stickerId) {
-        return (content == null || content.isEmpty()) && attachmentCount == 0 && stickerId == null;
+    private boolean messageIsEmpty(String content, int attachmentCount) {
+        return (content == null || content.isEmpty()) && attachmentCount == 0;
     }
 
     private void assertMessageCanBeEdited(Message message) {

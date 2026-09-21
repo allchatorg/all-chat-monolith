@@ -8,7 +8,6 @@ public record PromotedMessageDto(
         Long id,
         Long messageId,
         String messageContent,
-        String messageStickerId,
         Long chatRoomId,
         String chatRoomName,
         PromotedMessageStatus status,
