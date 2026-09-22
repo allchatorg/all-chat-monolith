@@ -2,7 +2,9 @@
 
 Apply `docs/sql/pro-fonts.sql` before deploying the backend with production schema validation. Deploy the backend before the frontend; added response fields are backward compatible.
 
-`GET` and `PATCH /api/v1/settings/fonts` return `usernameFont`, `messageFont`, `fontRevision`, `proActive`, `dailyLimit`, `changesRemaining`, and an ISO UTC `resetsAt`. PATCH requires both preset IDs: `DEFAULT`, `INTER`, or `OPEN_SANS`. One successful changed pair uses one of five daily saves; retries of the current pair are free. The allowance resets at midnight UTC.
+`GET` and `PATCH /api/v1/settings/fonts` return `usernameFont`, `messageFont`, `fontRevision`, `proActive`, `dailyLimit`, `changesRemaining`, and an ISO UTC `resetsAt`. PATCH requires both preset IDs: `DEFAULT`, `INTER`, `OPEN_SANS`, `NUNITO`, `COMFORTAA`, or `CAVEAT`. One successful changed pair uses one of five daily saves; retries of the current pair are free. The allowance resets at midnight UTC.
+
+Nunito adds a soft rounded option, Comfortaa a geometric rounded option, and Caveat a handwritten option. All presets are available for both usernames and messages. The frontend bundles the fonts and licenses locally, with Latin and Cyrillic coverage. These additional IDs fit the existing `varchar(16)` columns and require no further migration after `pro-fonts.sql`. Deploy the expanded backend enum before the matching frontend so new selections can be saved.
 
 Expired entitlement immediately renders default fonts. The existing expiry sweep clears saved custom choices, including when the badge is hidden. Billing also clears expired choices before granting a renewed entitlement. A delayed renewal after local `proPaidThrough` has elapsed counts as expiry; choices do not return automatically. Automatic resets increment `fontRevision` and leave the allowance unchanged.
 

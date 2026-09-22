@@ -4,7 +4,10 @@ package com.mk3.chatapp.enums;
 public enum FontPreset {
     DEFAULT,
     INTER,
-    OPEN_SANS;
+    OPEN_SANS,
+    NUNITO,
+    COMFORTAA,
+    CAVEAT;
 
     @com.fasterxml.jackson.annotation.JsonCreator
     public static FontPreset fromJson(String value) {
