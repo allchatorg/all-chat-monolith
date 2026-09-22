@@ -47,7 +47,7 @@ spring:
     password: ${SPRING_RABBITMQ_PASSWORD:guest}
   servlet:
     multipart:
-      # allchat Pro videos can be 100 MiB; allow multipart framing overhead.
+      # allchat Pro files can be 100 MiB; allow multipart framing overhead.
       # Per-account/type limits and the ads limit are enforced by their services.
       max-file-size: 100MB
       max-request-size: 110MB

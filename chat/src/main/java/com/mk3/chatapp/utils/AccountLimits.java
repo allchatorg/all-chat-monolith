@@ -1,6 +1,5 @@
 package com.mk3.chatapp.utils;
 
-import com.mk3.chatapp.enums.AttachmentTypeEnum;
 import com.mk3.chatapp.models.AttachmentType;
 import com.mk3.chatapp.models.identity.User;
 
@@ -9,7 +8,7 @@ public final class AccountLimits {
     public static final int REGULAR_MESSAGE_LENGTH = 500;
     public static final int PRO_MESSAGE_LENGTH = 2500;
     public static final int MAX_RAW_MESSAGE_LENGTH = 4 * PRO_MESSAGE_LENGTH;
-    public static final long PRO_VIDEO_BYTES = 100L * 1024 * 1024;
+    public static final long PRO_FILE_BYTES = 100L * 1024 * 1024;
     public static final long REGULAR_HOURLY_UPLOAD_BYTES = 25L * 1024 * 1024;
     public static final long PRO_HOURLY_UPLOAD_BYTES = 500L * 1024 * 1024;
 
@@ -43,8 +42,8 @@ public final class AccountLimits {
     }
 
     public static long attachmentBytes(User user, AttachmentType attachmentType) {
-        if (user.isProActive() && attachmentType.getFileType() == AttachmentTypeEnum.VIDEO) {
-            return PRO_VIDEO_BYTES;
+        if (user.isProActive()) {
+            return PRO_FILE_BYTES;
         }
         return attachmentType.getMaxFileSizeBytes();
     }

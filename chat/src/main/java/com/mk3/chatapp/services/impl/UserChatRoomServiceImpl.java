@@ -1,5 +1,7 @@
 package com.mk3.chatapp.services.impl;
 
+import com.mk3.chatapp.exceptions.AccountLimitExceededException;
+
 import com.mk3.chatapp.dtos.responses.RoomPopulationDTO;
 import com.mk3.chatapp.dtos.responses.UserChatRoomDTO;
 import com.mk3.chatapp.enums.ChatRoomType;
@@ -72,9 +74,11 @@ public class UserChatRoomServiceImpl implements UserChatRoomService {
             return;
         }
         int limit = AccountLimits.joinedPublicRooms(user);
-        if (userChatRoomRepository.countByUserAndChatRoom_Type(user, ChatRoomType.PUBLIC) >= limit) {
-            throw new IllegalArgumentException("You can join up to " + limit
-                    + " chatrooms. Leave a chatroom before joining another.");
+        long joined = userChatRoomRepository.countByUserAndChatRoom_Type(user, ChatRoomType.PUBLIC);
+        if (joined >= limit) {
+            throw new AccountLimitExceededException(AccountLimitExceededException.Code.PUBLIC_ROOMS,
+                    "You can join up to " + limit + " chatrooms. Leave a chatroom before joining another.",
+                    limit, joined, 1, user.isProActive() ? null : 100L);
         }
     }
 

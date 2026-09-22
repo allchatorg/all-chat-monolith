@@ -2,6 +2,7 @@ package com.mk3.chatapp.services.impl;
 
 import com.mk3.chatapp.enums.AttachmentTypeEnum;
 import com.mk3.chatapp.enums.MimeType;
+import com.mk3.chatapp.exceptions.AccountLimitExceededException;
 import com.mk3.chatapp.models.AttachmentType;
 import com.mk3.chatapp.models.Tag;
 import com.mk3.chatapp.models.identity.User;
@@ -30,7 +31,9 @@ public class AttachmentTypeServiceImpl implements AttachmentTypeService {
 
         long maxFileSizeBytes = AccountLimits.attachmentBytes(user, attachmentType);
         if (file.getSize() > maxFileSizeBytes) {
-            throw new IllegalArgumentException("File size exceeds the maximum allowed size of " + maxFileSizeBytes + " bytes");
+            throw new AccountLimitExceededException(AccountLimitExceededException.Code.ATTACHMENT_BYTES,
+                    "File size exceeds the maximum allowed size of " + maxFileSizeBytes + " bytes",
+                    maxFileSizeBytes, 0, file.getSize(), user.isProActive() ? null : AccountLimits.PRO_FILE_BYTES);
         }
 
         return attachmentType;

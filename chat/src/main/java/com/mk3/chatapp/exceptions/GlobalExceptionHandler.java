@@ -2,6 +2,7 @@ package com.mk3.chatapp.exceptions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mk3.chatapp.dtos.ErrorDTO;
+import com.mk3.chatapp.dtos.AccountLimitErrorDTO;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +27,16 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     private final ObjectMapper objectMapper;
+
+    @ExceptionHandler(AccountLimitExceededException.class)
+    public ResponseEntity<AccountLimitErrorDTO> handleAccountLimit(AccountLimitExceededException ex) {
+        HttpStatus status = ex.getCode() == AccountLimitExceededException.Code.HOURLY_UPLOAD_BYTES
+                ? HttpStatus.TOO_MANY_REQUESTS : HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(new AccountLimitErrorDTO(
+                status.value(), status.getReasonPhrase(), ex.getMessage(), LocalDateTime.now(),
+                new AccountLimitErrorDTO.Limit(ex.getCode(), ex.getMaximum(), ex.getUsed(),
+                        ex.getRequested(), ex.getProMaximum())));
+    }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)

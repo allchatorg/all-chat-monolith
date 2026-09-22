@@ -3,7 +3,7 @@ package com.mk3.chatapp.services.impl;
 import com.mk3.chatapp.dtos.AttachmentDTO;
 import com.mk3.chatapp.dtos.TagDTO;
 import com.mk3.chatapp.enums.MimeType;
-import com.mk3.chatapp.exceptions.UploadLimitExceededException;
+import com.mk3.chatapp.exceptions.AccountLimitExceededException;
 import com.mk3.chatapp.mappers.AttachmentMapper;
 import com.mk3.chatapp.models.Attachment;
 import com.mk3.chatapp.models.AttachmentType;
@@ -173,11 +173,12 @@ public class AttachmentServiceImpl implements AttachmentService {
             double usedMB = totalUploadedFilesSize / (1024.0 * 1024.0);
             double limitMB = maxAllowedSize / (1024.0 * 1024.0);
 
-            throw new UploadLimitExceededException(
+            throw new AccountLimitExceededException(AccountLimitExceededException.Code.HOURLY_UPLOAD_BYTES,
                     String.format(
                             "Uploading this file exceeds your hourly upload limit of %.2f MB (you've already used %.2f MB).",
                             limitMB,
-                            usedMB));
+                            usedMB), maxAllowedSize, totalUploadedFilesSize, newFileSize,
+                    user.isProActive() ? null : AccountLimits.PRO_HOURLY_UPLOAD_BYTES);
         }
     }
 
