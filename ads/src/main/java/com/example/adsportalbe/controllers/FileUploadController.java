@@ -24,12 +24,20 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class FileUploadController {
 
+    // Preserve the ads uploader's previous multipart ceiling independently of Pro chat uploads.
+    private static final long MAX_FILE_SIZE_BYTES = 30L * 1024 * 1024;
+
     private final FileUploadService fileUploadService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FileUploadResponseDto> uploadFile(@RequestParam("file") MultipartFile file) throws IOException {
         if (file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File is empty");
+        }
+
+        if (file.getSize() > MAX_FILE_SIZE_BYTES) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,
+                    "Ads uploads cannot exceed 30 MB per file.");
         }
 
         String contentType = file.getContentType();

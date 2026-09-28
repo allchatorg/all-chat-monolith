@@ -1,6 +1,7 @@
 package com.mk3.chatapp.models;
 
 import com.mk3.chatapp.models.identity.User;
+import com.mk3.chatapp.utils.AccountLimits;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,7 +25,7 @@ public class MessageEditHistory extends Base {
     private Message message;
 
     // Archives prior raw marker text; sized to Message.content
-    @Column(nullable = false, length = 2000)
+    @Column(nullable = false, length = AccountLimits.MAX_RAW_MESSAGE_LENGTH)
     private String content;
 
     @ManyToOne

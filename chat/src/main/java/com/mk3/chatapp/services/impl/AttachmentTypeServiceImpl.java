@@ -2,10 +2,13 @@ package com.mk3.chatapp.services.impl;
 
 import com.mk3.chatapp.enums.AttachmentTypeEnum;
 import com.mk3.chatapp.enums.MimeType;
+import com.mk3.chatapp.exceptions.AccountLimitExceededException;
 import com.mk3.chatapp.models.AttachmentType;
 import com.mk3.chatapp.models.Tag;
+import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.repositories.AttachmentTypeRepository;
 import com.mk3.chatapp.services.AttachmentTypeService;
+import com.mk3.chatapp.utils.AccountLimits;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,15 +22,18 @@ public class AttachmentTypeServiceImpl implements AttachmentTypeService {
     private final AttachmentTypeRepository attachmentTypeRepository;
 
     @Override
-    public AttachmentType validateAndResolveAttachmentType(MultipartFile file) {
+    public AttachmentType validateAndResolveAttachmentType(MultipartFile file, User user) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("File cannot be null or empty");
         }
 
         AttachmentType attachmentType = getAttachmentType(file);
 
-        if (file.getSize() > attachmentType.getMaxFileSizeBytes()) {
-            throw new IllegalArgumentException("File size exceeds the maximum allowed size of " + attachmentType.getMaxFileSizeBytes() + " bytes");
+        long maxFileSizeBytes = AccountLimits.attachmentBytes(user, attachmentType);
+        if (file.getSize() > maxFileSizeBytes) {
+            throw new AccountLimitExceededException(AccountLimitExceededException.Code.ATTACHMENT_BYTES,
+                    "File size exceeds the maximum allowed size of " + maxFileSizeBytes + " bytes",
+                    maxFileSizeBytes, 0, file.getSize(), user.isProActive() ? null : AccountLimits.PRO_FILE_BYTES);
         }
 
         return attachmentType;

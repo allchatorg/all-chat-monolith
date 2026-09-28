@@ -12,6 +12,9 @@ import java.util.List;
 public interface UserChatRoomService {
     UserChatRoom joinChatRoom(User user, ChatRoom chatRoom);
 
+    /** Lock and check capacity before creating a new public room in the caller's transaction. */
+    User prepareNewPublicRoom(User user);
+
     UserChatRoom findByUserAndChatRoom(User user, ChatRoom chatRoom);
 
     void deleteById(Long id);

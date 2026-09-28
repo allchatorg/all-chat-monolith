@@ -1,5 +1,7 @@
 package com.mk3.chatapp.services.impl;
 
+import com.mk3.chatapp.exceptions.AccountLimitExceededException;
+
 import com.mk3.chatapp.dtos.responses.RoomPopulationDTO;
 import com.mk3.chatapp.dtos.responses.UserChatRoomDTO;
 import com.mk3.chatapp.enums.ChatRoomType;
@@ -14,8 +16,11 @@ import com.mk3.chatapp.services.ChatRoomService;
 import com.mk3.chatapp.services.MessagesService;
 import com.mk3.chatapp.services.RoomActivityService;
 import com.mk3.chatapp.services.UserChatRoomService;
+import com.mk3.chatapp.services.UserAccountLockService;
+import com.mk3.chatapp.utils.AccountLimits;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -31,16 +36,21 @@ public class UserChatRoomServiceImpl implements UserChatRoomService {
 
     private final MessageMapper messageMapper;
     private final MessagesService messagesService;
+    private final UserAccountLockService userAccountLockService;
 
     @Override
     @Transactional
     public UserChatRoom joinChatRoom(User user, ChatRoom chatRoom) {
+        user = userAccountLockService.lock(user);
         chatRoomService.validateUserCanJoinChatRoom(user, chatRoom);
 
         UserChatRoom existingUserChatRoom = userChatRoomRepository.findUserChatRoomByUserAndChatRoom(user, chatRoom)
                 .orElse(null);
         if (existingUserChatRoom != null) {
-            return findByUserAndChatRoom(user, chatRoom);
+            return existingUserChatRoom;
+        }
+        if (chatRoom.getType() == ChatRoomType.PUBLIC) {
+            validatePublicRoomCapacity(user);
         }
         UserChatRoom userChatRoom = UserChatRoom.builder()
                 .user(user)
@@ -49,6 +59,27 @@ public class UserChatRoomServiceImpl implements UserChatRoomService {
 
         userChatRoomRepository.save(userChatRoom);
         return userChatRoom;
+    }
+
+    @Override
+    @Transactional(propagation = Propagation.MANDATORY)
+    public User prepareNewPublicRoom(User user) {
+        User locked = userAccountLockService.lock(user);
+        validatePublicRoomCapacity(locked);
+        return locked;
+    }
+
+    private void validatePublicRoomCapacity(User user) {
+        if (user.getRole().isStaffMember()) {
+            return;
+        }
+        int limit = AccountLimits.joinedPublicRooms(user);
+        long joined = userChatRoomRepository.countByUserAndChatRoom_Type(user, ChatRoomType.PUBLIC);
+        if (joined >= limit) {
+            throw new AccountLimitExceededException(AccountLimitExceededException.Code.PUBLIC_ROOMS,
+                    "You can join up to " + limit + " chatrooms. Leave a chatroom before joining another.",
+                    limit, joined, 1, user.isProActive() ? null : 100L);
+        }
     }
 
     @Override

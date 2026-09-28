@@ -21,6 +21,8 @@ import java.util.Set;
 public interface UserChatRoomRepository extends JpaRepository<UserChatRoom, Long> {
     boolean existsByUserAndChatRoom(User user, ChatRoom chatRoom);
 
+    long countByUserAndChatRoom_Type(User user, ChatRoomType type);
+
     Optional<UserChatRoom> findUserChatRoomByUserAndChatRoom(User user, ChatRoom chatRoom);
 
     @EntityGraph(attributePaths = {"chatRoom"})

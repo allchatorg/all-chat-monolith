@@ -39,6 +39,12 @@ services:
   clamav:
     image: clamav/clamav:latest
     platform: linux/amd64   # <--- Force x86 emulation
+    environment:
+      # Scan the complete 100 MiB allchat Pro upload, with bounded headroom.
+      CLAMD_CONF_StreamMaxLength: 110M
+      CLAMD_CONF_MaxFileSize: 110M
+      CLAMD_CONF_MaxScanSize: 400M
+      CLAMD_CONF_AlertExceedsMax: "yes"
     ports:
       - "3310:3310"
     healthcheck:

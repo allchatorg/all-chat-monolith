@@ -54,7 +54,6 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                 .build();
 
         chatRoomRepository.save(chatRoom);
-        roomActivityService.storeRoomMetadata(chatRoom.getId().toString(), chatRoom.getName());
         return chatRoom;
     }
 

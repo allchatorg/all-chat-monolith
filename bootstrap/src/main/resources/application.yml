@@ -47,9 +47,10 @@ spring:
     password: ${SPRING_RABBITMQ_PASSWORD:guest}
   servlet:
     multipart:
-      # 30MB to accommodate ads media uploads (chat needed only 11MB)
-      max-file-size: 30MB
-      max-request-size: 30MB
+      # allchat Pro files can be 100 MiB; allow multipart framing overhead.
+      # Per-account/type limits and the ads limit are enforced by their services.
+      max-file-size: 100MB
+      max-request-size: 110MB
   quartz:
     job-store-type: jdbc
     properties:

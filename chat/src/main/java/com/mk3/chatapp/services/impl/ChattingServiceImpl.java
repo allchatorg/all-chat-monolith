@@ -46,10 +46,11 @@ public class ChattingServiceImpl implements ChattingService {
     private final CsamAnalysisPublisher csamAnalysisPublisher;
     private final PrivateChatService privateChatService;
     private final MessagePromotionPort messagePromotionPort;
+    private final UserAccountLockService userAccountLockService;
 
     @Transactional
     public AttachmentDTO uploadAttachment(MultipartFile file) {
-        var user = securityService.getCurrentUser();
+        var user = userAccountLockService.lock(securityService.getCurrentUser());
         var attachmentDTO = attachmentService.uploadAttachment(file, user);
         userService.incrementTotalUploadedFilesSize(file.getSize(), user);
         return attachmentDTO;
