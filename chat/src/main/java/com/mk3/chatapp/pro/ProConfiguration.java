@@ -5,20 +5,12 @@ import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.context.annotation.Bean;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Component
 @Getter
 public class ProConfiguration {
-    private final Environment environment;
-
-    public ProConfiguration(Environment environment) {
-        this.environment = environment;
-    }
-
     @Bean(name = "proReconciliationTaskScheduler", defaultCandidate = false)
     public ThreadPoolTaskScheduler proReconciliationTaskScheduler() {
         var scheduler = new ThreadPoolTaskScheduler();
@@ -52,8 +44,6 @@ public class ProConfiguration {
     private boolean liveEnabled;
     @Value("${app.pro.yearly-billing-enabled:false}")
     private boolean yearlyBillingEnabled;
-    @Value("${spring.jpa.hibernate.ddl-auto:}")
-    private String schemaPolicy;
     @Value("${stripe.api-key:}")
     private String apiKey;
     @Value("${stripe.pro.webhook-secret:}")
@@ -77,10 +67,7 @@ public class ProConfiguration {
 
     public boolean billingAvailable() {
         boolean live = hasValue(apiKey) && (apiKey.startsWith("sk_live_") || apiKey.startsWith("rk_live_"));
-        boolean persistent = java.util.Set.of("validate", "none", "update").contains(schemaPolicy);
-        // Disposable schemas are allowed only for development with Stripe test keys.
-        boolean disposableDevelopment = !live && environment.acceptsProfiles(Profiles.of("dev & !prod"));
-        return enabled && hasApiKey() && (persistent || disposableDevelopment) && (!live || liveEnabled)
+        return enabled && hasApiKey() && (!live || liveEnabled)
                 && hasValue(webhookSecret) && hasValue(monthlyPriceId)
                 && hasValue(billingPortalConfigurationId)
                 && (!yearlyBillingEnabled || (hasValue(yearlyPriceId) && hasValue(switchPortalConfigurationId)));
