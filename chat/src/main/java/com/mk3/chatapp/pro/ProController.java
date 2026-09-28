@@ -65,7 +65,8 @@ public class ProController {
             return operation.run();
         } catch (StripeException e) {
             // Do not surface/log raw provider responses containing billing details.
-            log.warn("Pro provider operation failed ({})", e.getClass().getSimpleName());
+            log.warn("Pro provider operation failed (type={}, code={}, status={}, requestId={})",
+                    e.getClass().getSimpleName(), e.getCode(), e.getStatusCode(), e.getRequestId());
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "Billing is temporarily unavailable. Please try again.");
         }
