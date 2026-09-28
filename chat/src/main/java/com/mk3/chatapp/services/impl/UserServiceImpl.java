@@ -64,6 +64,7 @@ public class UserServiceImpl implements UserService {
     private final PhoneNumberCleanupSchedulingService phoneNumberCleanupSchedulingService;
     private final GeolocationService geolocationService;
     private final ProBillingService proBillingService;
+    private final com.mk3.chatapp.services.ProFontService proFontService;
 
     @Override
     public void changePassword(ChangePasswordRequestDTO request, Principal connectedUser) {
@@ -486,6 +487,7 @@ public class UserServiceImpl implements UserService {
         proBillingService.cancelForAccountDeletion(user);
         user.setProPaidThrough(null);
         user.setDeleted(true);
+        proFontService.resetExpiredPreferences(user);
         user.setEmail(null);
         user.getUserChatRooms().clear();
         user.getBlurredContentTags().clear();

@@ -23,6 +23,9 @@ public interface MessageMapper {
     @Mapping(target = "senderIdVerificationStatus", source = "message.sender.idVerificationStatus")
     @Mapping(target = "senderProBadgeVisible", source = "message.sender.proBadgeVisible")
     @Mapping(target = "senderProBadgeRevision", source = "message.sender.proBadgeRevision")
+    @Mapping(target = "senderUsernameFont", source = "message.sender.effectiveUsernameFont")
+    @Mapping(target = "senderMessageFont", source = "message.sender.effectiveMessageFont")
+    @Mapping(target = "senderFontRevision", source = "message.sender.fontRevision")
     @Mapping(target = "replyTo", expression = "java(toReplyInfoDTO(message.getReplyTo(), false))")
     @Mapping(target = "promotion", ignore = true)
     MessageResponseDTO toMessageResponseDTO(Message message);
@@ -54,6 +57,9 @@ public interface MessageMapper {
                 hasAttachment,
                 attachmentName,
                 parent.getSender().isProBadgeVisible(),
-                parent.getSender().getProBadgeRevision());
+                parent.getSender().getProBadgeRevision(),
+                parent.getSender().getEffectiveUsernameFont(),
+                parent.getSender().getEffectiveMessageFont(),
+                parent.getSender().getFontRevision());
     }
 }

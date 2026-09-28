@@ -137,7 +137,10 @@ public class MessagesServiceImpl implements MessagesService {
                 messageResponseDTO.replyTo(),
                 messageResponseDTO.promotion(),
                 messageResponseDTO.senderProBadgeVisible(),
-                messageResponseDTO.senderProBadgeRevision());
+                messageResponseDTO.senderProBadgeRevision(),
+                messageResponseDTO.senderUsernameFont(),
+                messageResponseDTO.senderMessageFont(),
+                messageResponseDTO.senderFontRevision());
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.mk3.chatapp.dtos.TagDTO;
 import com.mk3.chatapp.enums.IdVerificationStatus;
 import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.enums.TimeFormat;
+import com.mk3.chatapp.enums.FontPreset;
 
 import java.util.List;
 
@@ -35,5 +36,8 @@ public record UserDTO(
         @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
         Boolean showProBadge,
         boolean proBadgeVisible,
-        long proBadgeRevision) {
+        long proBadgeRevision,
+        FontPreset usernameFont,
+        FontPreset messageFont,
+        long fontRevision) {
 }
