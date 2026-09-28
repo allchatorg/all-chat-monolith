@@ -353,22 +353,12 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
     @Override
     public void reactToMessage(ReactionRequestDTO reactionRequestDTO, ReactionType reactionType) {
         var currentUser = securityService.getCurrentUser();
-        var message = messagesService.findById(reactionRequestDTO.messageId(), currentUser.getRole());
-        if (message.getDeleted()) {
-            throw new IllegalArgumentException("Cannot react to a deleted message.");
-        }
-
-        chatRoomService.validateRoomIsNotArchived(message.getChatRoom(), "react to messages");
-
-        var roomId = message.getChatRoom().getId();
-
         if (reactionType == ReactionType.ADD) {
-            reactionService.addReaction(currentUser, message, reactionRequestDTO.emoji(), reactionRequestDTO.emojiId());
-            roomActivityService.incrementReactionCount(roomId, message.getId());
+            reactionService.addReaction(currentUser, reactionRequestDTO.messageId(),
+                    reactionRequestDTO.emoji(), reactionRequestDTO.emojiId());
         } else if (reactionType == ReactionType.REMOVE) {
-            reactionService.removeReaction(currentUser, message, reactionRequestDTO.emoji(),
-                    reactionRequestDTO.emojiId());
-            roomActivityService.decrementReactionCount(roomId, message.getId());
+            reactionService.removeReaction(currentUser, reactionRequestDTO.messageId(),
+                    reactionRequestDTO.emoji(), reactionRequestDTO.emojiId());
         } else {
             throw new IllegalArgumentException("Unsupported reaction type: " + reactionType);
         }

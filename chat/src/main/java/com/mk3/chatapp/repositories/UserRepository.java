@@ -35,6 +35,10 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
 
     Optional<User> findById(Long id);
 
+    // Read the billing projection directly, bypassing potentially stale authenticated entities.
+    @Query("select u.proPaidThrough from User u where u.id = :id and u.deleted = false and u.banned = false")
+    Optional<Instant> findEligibleProPaidThrough(@Param("id") Long id);
+
     @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
     @Query("update User u set u.usernameFont = :usernameFont, u.messageFont = :messageFont, " +
             "u.fontRevision = :revision, u.fontChangesDate = :changesDate, u.fontChangesCount = :changesCount where u.id = :id")

@@ -26,6 +26,13 @@ public class ProBadgeService {
     private final EntityManager entityManager;
     private final ProFontService fonts;
 
+    /** Paid feature entitlement is independent of the public badge preference. */
+    @Transactional(readOnly = true)
+    public boolean hasActiveEntitlement(Long userId) {
+        return userId != null && userRepository.findEligibleProPaidThrough(userId)
+                .filter(paidThrough -> paidThrough.isAfter(Instant.now())).isPresent();
+    }
+
     /** Caller holds the user row lock, shared with all subscription mutations. */
     @Transactional(propagation = Propagation.MANDATORY)
     public void updateEntitlement(User user, Instant paidThrough) {

@@ -19,7 +19,7 @@ import com.mk3.chatapp.services.*;
 import com.mk3.chatapp.specifications.MessageSpecification;
 import com.mk3.chatapp.utils.AccountLimits;
 import com.mk3.chatapp.exceptions.AccountLimitExceededException;
-import com.mk3.chatapp.utils.MessageMarkers;
+import com.mk3.chatapp.utils.ChatMessageContent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -39,9 +39,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MessagesServiceImpl implements MessagesService {
     public static final int MAX_LENGTH = AccountLimits.REGULAR_MESSAGE_LENGTH;
-    // Hard ceiling on raw stored content: the editor wraps each styled run in at
-    // most 6 marker chars and needs >=1 visible char inside each group and
-    // between groups, so raw <= 4 * visible for any legitimate message.
+    // Separate storage ceiling for formatting and canonical inline emoji markers.
+    // The effective per-account raw cap is enforced alongside the visible limit.
     public static final int MAX_RAW_LENGTH = AccountLimits.MAX_RAW_MESSAGE_LENGTH;
     private final MessageRepository messageRepository;
 
@@ -54,10 +53,11 @@ public class MessagesServiceImpl implements MessagesService {
     private final ChatRoomService chatRoomService;
     private final UserChatRoomRepository userChatRoomRepository;
     private final MessagePromotionEnrichmentService messagePromotionEnrichmentService;
+    private final ProStickerService proStickerService;
 
     /**
      * Validates message content when saving a new message.
-     * Content cannot be null or empty.
+     * A message requires text or an attachment.
      */
     public static void validateMessageForSave(String content, int maxLength, List<AttachmentDTO> attachments) {
         if (content == null || content.isEmpty() && (attachments == null || attachments.isEmpty())) {
@@ -76,7 +76,6 @@ public class MessagesServiceImpl implements MessagesService {
      * Content can be empty if there are attachments.
      */
     public static void validateMessageForEdit(String content, int maxLength, int attachmentCount) {
-        // If there are no attachments, content cannot be empty
         if (attachmentCount == 0 && (content == null || content.isEmpty())) {
             throw new IllegalArgumentException("Message content cannot be null or empty when there are no attachments");
         }
@@ -98,7 +97,7 @@ public class MessagesServiceImpl implements MessagesService {
                     "Message formatting exceeds the current limit. Remove some formatting and try again.",
                     maxRawLength, content.length(), 0, null);
         }
-        int visibleLength = MessageMarkers.strip(content).length();
+        int visibleLength = ChatMessageContent.plainText(content).length();
         if (visibleLength > maxLength) {
             throw new AccountLimitExceededException(AccountLimitExceededException.Code.MESSAGE_CHARACTERS,
                     "Message content exceeds maximum length of " + maxLength + " characters",
@@ -140,7 +139,8 @@ public class MessagesServiceImpl implements MessagesService {
                 messageResponseDTO.senderProBadgeRevision(),
                 messageResponseDTO.senderUsernameFont(),
                 messageResponseDTO.senderMessageFont(),
-                messageResponseDTO.senderFontRevision());
+                messageResponseDTO.senderFontRevision(),
+                messageResponseDTO.stickerId());
     }
 
     @Override
@@ -184,10 +184,23 @@ public class MessagesServiceImpl implements MessagesService {
         }
 
         chatRoomService.validateRoomIsNotArchived(chatRoom, "send messages");
-        validateMessageForSave(messageRequestDTO.content(), AccountLimits.messageLength(user), messageRequestDTO.attachments());
+        String content = messageRequestDTO.content() == null ? "" : messageRequestDTO.content();
+        if (messageRequestDTO.stickerId() != null) {
+            if (!content.isEmpty() || (messageRequestDTO.attachments() != null
+                    && !messageRequestDTO.attachments().isEmpty())) {
+                throw new IllegalArgumentException("Sticker messages cannot include text or attachments");
+            }
+            proStickerService.validateForSend(messageRequestDTO.stickerId(), user.getId());
+        } else {
+            validateMessageForSave(content, AccountLimits.messageLength(user), messageRequestDTO.attachments());
+            if (content.contains(":allchat:")) {
+                proStickerService.validateInlineEmojis(content, null, user.getId());
+            }
+        }
 
         var message = Message.builder()
-                .content(messageRequestDTO.content())
+                .content(content)
+                .stickerId(messageRequestDTO.stickerId())
                 .sender(user)
                 .chatRoom(chatRoom)
                 .replyTo(resolveReplyParent(messageRequestDTO.replyToMessageId(), chatRoom))
@@ -497,10 +510,15 @@ public class MessagesServiceImpl implements MessagesService {
                     "Messages of other users cannot be edited" + messageId);
         }
 
-        validateMessageForEdit(content, AccountLimits.messageLength(user), message.getAttachments().size());
+        assertMessageCanBeEdited(message);
+        String updatedContent = content == null ? "" : content;
+        validateMessageForEdit(updatedContent, AccountLimits.messageLength(user), message.getAttachments().size());
+        if (updatedContent.contains(":allchat:")) {
+            proStickerService.validateInlineEmojis(updatedContent, message.getContent(), user.getId());
+        }
 
         messageEditHistoryService.save(message.getContent(), message, new ArrayList<>(message.getAttachments()), user);
-        message.setContent(content);
+        message.setContent(updatedContent);
         message.setEditedAt(Instant.now());
 
         var updatedMessage = messageRepository.save(message);
@@ -519,16 +537,17 @@ public class MessagesServiceImpl implements MessagesService {
                     "Messages of other users cannot be removed" + messageId);
         }
 
-        var attachmentIds = message.getAttachments().stream().map(Attachment::getId).toList();
-
-        attachmentService.softDeleteAttachments(List.of(attachmentId));
-
+        assertMessageCanBeEdited(message);
+        if (message.getAttachments().stream().noneMatch(attachment -> Objects.equals(attachment.getId(), attachmentId))) {
+            throw new IllegalArgumentException("Attachment does not belong to this message");
+        }
         if (messageIsEmpty(message.getContent(), message.getAttachments().size() - 1)) {
             throw new IllegalArgumentException(
                     "Message cannot be left empty after removing attachment");
         }
 
         messageEditHistoryService.save(message.getContent(), message, new ArrayList<>(message.getAttachments()), user);
+        attachmentService.softDeleteAttachments(List.of(attachmentId));
         message.setEditedAt(Instant.now());
 
         var updatedMessage = messageRepository.save(message);
@@ -579,6 +598,15 @@ public class MessagesServiceImpl implements MessagesService {
 
     private boolean messageIsEmpty(String content, int attachmentCount) {
         return (content == null || content.isEmpty()) && attachmentCount == 0;
+    }
+
+    private void assertMessageCanBeEdited(Message message) {
+        if (Boolean.TRUE.equals(message.getDeleted()) || Boolean.TRUE.equals(message.getQuarantined())) {
+            throw new IllegalArgumentException("Removed messages cannot be edited");
+        }
+        if (message.getStickerId() != null) {
+            throw new IllegalArgumentException("Sticker messages cannot be edited");
+        }
     }
 
     @Override

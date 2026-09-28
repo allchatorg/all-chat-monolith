@@ -1,5 +1,6 @@
 # Project conventions
 
+- Do not add tests unless the user explicitly requests them.
 - Always write the product name as `allchat`, in lowercase, including at the
   start of sentences, in headings, UI labels, accessibility text, and documentation.
   The subscription name is `allchat Pro`. Do not uppercase the brand with CSS.

@@ -15,6 +15,13 @@ public record ReplyInfoDTO(
         long senderProBadgeRevision,
         FontPreset senderUsernameFont,
         FontPreset senderMessageFont,
-        long senderFontRevision
+        long senderFontRevision,
+        String stickerId
 ) {
+    public ReplyInfoDTO(Long id, Long senderId, String senderUsername, String color, String content,
+                        boolean deleted, boolean hasAttachment, String attachmentName,
+                        boolean senderProBadgeVisible, long senderProBadgeRevision) {
+        this(id, senderId, senderUsername, color, content, deleted, hasAttachment, attachmentName,
+                senderProBadgeVisible, senderProBadgeRevision, FontPreset.DEFAULT, FontPreset.DEFAULT, 0L, null);
+    }
 }
