@@ -77,7 +77,7 @@ public class ProConfiguration {
     }
 
     public String returnUrl() {
-        return frontendUrl.replaceAll("/+$", "") + "/pro/return";
+        return frontendUrl.replaceAll("/+$", "") + "/";
     }
 
     public RequestOptions requestOptions() {

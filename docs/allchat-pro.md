@@ -124,14 +124,15 @@ Do not use `decreasing_item_amount` as a scheduling condition: the discounted
 annual price could otherwise defer the monthly-to-yearly upgrade. The annual
 upgrade must show the prorated charge before confirmation; the monthly change
 must show next renewal as its effective date. Configure branding and the return
-link to the deployment's `/pro/return` page. Checkout and portal returns open
-the subscription modal automatically; payment confirmation still comes from
-the backend. Previously issued `/settings/subscriptions` return links also
-open the modal when they include a checkout or billing result.
-For a staggered rollout, make `/pro/return` available on the frontend host
-before the backend starts issuing the new URLs. A temporary rewrite to
-`/settings/subscriptions`, preserving the query string, supports the normal
-backend-before-frontend deployment order.
+link to the deployment's `/?pro=subscriptions` URL. Checkout returns add
+`checkout=success` or `checkout=canceled`; portal returns add `billing=updated`.
+The chat loads normally and opens the subscription modal over it. The modal
+retains the return result while the URL parameters are removed, so closing it
+leaves the user in chat and payment-confirmation polling continues until the
+backend confirms access. Previously issued `/pro/return` and
+`/settings/subscriptions` result links forward into the same chat flow.
+Restricted accounts retain access to billing without initializing unavailable
+chat features. Return parameters never grant Pro access themselves.
 
 The runtime's Stripe Java SDK remains at 24.12.0 (API 2023-10-16). It supports
 portal flows, but not a typed `schedule_at_period_end` configuration setter.

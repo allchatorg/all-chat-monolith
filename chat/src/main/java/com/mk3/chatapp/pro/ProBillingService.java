@@ -137,8 +137,8 @@ public class ProBillingService {
                 .putExtraParam("adaptive_pricing", Map.of("enabled", false))
                 .setCustomer(user.getStripeCustomerId())
                 .setClientReferenceId(user.getId().toString())
-                .setSuccessUrl(config.returnUrl() + "?checkout=success")
-                .setCancelUrl(config.returnUrl() + "?checkout=canceled")
+                .setSuccessUrl(config.returnUrl() + "?pro=subscriptions&checkout=success")
+                .setCancelUrl(config.returnUrl() + "?pro=subscriptions&checkout=canceled")
                 .setExpiresAt(projection.getCheckoutExpiresAt().getEpochSecond())
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
                 .addLineItem(SessionCreateParams.LineItem.builder()
@@ -186,7 +186,7 @@ public class ProBillingService {
         validatePortalConfiguration(configurationId, switchPlan);
         var params = com.stripe.param.billingportal.SessionCreateParams.builder()
                 .setCustomer(user.getStripeCustomerId()).setConfiguration(configurationId)
-                .setReturnUrl(config.returnUrl() + "?billing=updated");
+                .setReturnUrl(config.returnUrl() + "?pro=subscriptions&billing=updated");
         if (switchPlan) {
             params.setFlowData(com.stripe.param.billingportal.SessionCreateParams.FlowData.builder()
                     .setType(com.stripe.param.billingportal.SessionCreateParams.FlowData.Type.SUBSCRIPTION_UPDATE)
@@ -195,7 +195,7 @@ public class ProBillingService {
                     .setAfterCompletion(com.stripe.param.billingportal.SessionCreateParams.FlowData.AfterCompletion.builder()
                             .setType(com.stripe.param.billingportal.SessionCreateParams.FlowData.AfterCompletion.Type.REDIRECT)
                             .setRedirect(com.stripe.param.billingportal.SessionCreateParams.FlowData.AfterCompletion.Redirect
-                                    .builder().setReturnUrl(config.returnUrl() + "?billing=updated").build())
+                                    .builder().setReturnUrl(config.returnUrl() + "?pro=subscriptions&billing=updated").build())
                             .build()).build());
         }
         return com.stripe.model.billingportal.Session.create(params.build(), config.requestOptions()).getUrl();
