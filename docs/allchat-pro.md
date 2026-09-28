@@ -124,7 +124,14 @@ Do not use `decreasing_item_amount` as a scheduling condition: the discounted
 annual price could otherwise defer the monthly-to-yearly upgrade. The annual
 upgrade must show the prorated charge before confirmation; the monthly change
 must show next renewal as its effective date. Configure branding and the return
-link to the deployment's `/settings/subscriptions` page.
+link to the deployment's `/pro/return` page. Checkout and portal returns open
+the subscription modal automatically; payment confirmation still comes from
+the backend. Previously issued `/settings/subscriptions` return links also
+open the modal when they include a checkout or billing result.
+For a staggered rollout, make `/pro/return` available on the frontend host
+before the backend starts issuing the new URLs. A temporary rewrite to
+`/settings/subscriptions`, preserving the query string, supports the normal
+backend-before-frontend deployment order.
 
 The runtime's Stripe Java SDK remains at 24.12.0 (API 2023-10-16). It supports
 portal flows, but not a typed `schedule_at_period_end` configuration setter.
