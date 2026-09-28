@@ -1,5 +1,6 @@
 package com.example.adsportalbe.dto.ad;
 
+import com.mk3.chatapp.pro.ProStatisticsResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,4 +14,5 @@ import java.util.List;
 @NoArgsConstructor
 public class MonthlyRevenueResponseDto {
     private List<MonthlyRevenueDto> data;
+    private ProStatisticsResponse.Synchronization subscriptionSynchronization;
 }

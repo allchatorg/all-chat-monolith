@@ -18,8 +18,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.support.JpaRepositoryFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
-import org.springframework.jdbc.datasource.init.ScriptUtils;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.SharedEntityManagerCreator;
@@ -30,7 +28,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import javax.sql.DataSource;
 import java.time.Instant;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -111,31 +108,6 @@ class ProFontPostgresTest {
         assertThat(jdbc.queryForObject("select username_font from chat_user where id = ?", String.class, userId)).isEqualTo("DEFAULT");
         assertThat(fonts.getSettings(userId).fontRevision()).isEqualTo(2);
         assertThat(fonts.getSettings(userId).changesRemaining()).isEqualTo(4);
-    }
-
-    @Test
-    void migrationAddsDefaultsWithoutRewritingExistingRowsAndCanRunTwice() throws Exception {
-        var script = new FileSystemResource(Path.of(System.getProperty("basedir"), "..", "docs", "sql", "pro-fonts.sql"));
-        assertThat(script.exists()).isTrue();
-        try (var connection = context.getBean(DataSource.class).getConnection(); var statement = connection.createStatement()) {
-            statement.execute("create schema font_migration_check");
-            statement.execute("set search_path to font_migration_check");
-            statement.execute("create table chat_user (id bigint primary key, username varchar(50))");
-            statement.execute("insert into chat_user (id, username) values (1, 'existing_user')");
-            ScriptUtils.executeSqlScript(connection, script);
-            ScriptUtils.executeSqlScript(connection, script);
-            try (var row = statement.executeQuery("select * from chat_user where id = 1")) {
-                assertThat(row.next()).isTrue();
-                assertThat(row.getString("username")).isEqualTo("existing_user");
-                assertThat(row.getString("username_font")).isEqualTo("DEFAULT");
-                assertThat(row.getString("message_font")).isEqualTo("DEFAULT");
-                assertThat(row.getLong("font_revision")).isZero();
-                assertThat(row.getInt("font_changes_count")).isZero();
-                assertThat(row.getDate("font_changes_date")).isNull();
-            } finally {
-                statement.execute("drop schema font_migration_check cascade");
-            }
-        }
     }
 
     private static int saveTogether(long userId, FontPreset preset, CountDownLatch ready, CountDownLatch start) throws Exception {

@@ -50,7 +50,7 @@ public class AdminController {
     }
 
     @GetMapping("/users/{userId}/details")
-    @PreAuthorize("@security.canActOnTargetUser(#userId)")
+    @PreAuthorize("@security.isStaffMember() && @security.canActOnTargetUser(#userId)")
     public ResponseEntity<UserAdminViewDTO> getUserAdminViewDetails(@PathVariable Long userId) {
         UserAdminViewDTO userDetails = adminFacadeService.getUserAdminViewDetails(userId);
         return ResponseEntity.ok(userDetails);
@@ -63,7 +63,7 @@ public class AdminController {
     }
 
     @GetMapping("/users/{userId}")
-    @PreAuthorize("@security.canActOnTargetUser(#userId)")
+    @PreAuthorize("@security.isStaffMember() && @security.canActOnTargetUser(#userId)")
     public ResponseEntity<UserDTO> getUserAdminDetails(@PathVariable Long userId) {
         UserDTO userAdminDetails = adminFacadeService.getUserAdminDetails(userId);
         return ResponseEntity.ok(userAdminDetails);

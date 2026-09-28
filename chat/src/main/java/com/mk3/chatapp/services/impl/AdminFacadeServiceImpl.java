@@ -119,7 +119,7 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
     @Override
     public UserDTO getUserAdminDetails(Long userId) {
         var user = userService.findById(userId);
-        return userMapper.toDto(user);
+        return userMapper.toModerationDto(user);
     }
 
     @Override
@@ -185,7 +185,7 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
         return new UserAdminViewDTO(user.getId(), user.getApplicationUsername(), user.getEmail(), user.isOver18(),
                 user.isClaimed(), user.isVerified(), user.isBanned(), user.getIdVerificationStatus(), user.getRole(),
                 user.getTotalUploadUsage(), usernameHistory, user.getCreatedAt(), lastSession.get().getCreatedAt(),
-                user.getCountryCode());
+                user.getCountryCode(), user.isProActive());
     }
 
     @Override

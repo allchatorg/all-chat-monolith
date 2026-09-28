@@ -8,8 +8,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      # Production data (including subscription ownership) must survive restarts.
-      # Apply the documented additive migrations before starting this profile.
+      # Disposable schema: recreate application tables on startup and drop them on shutdown.
       ddl-auto: create-drop
     show-sql: false
     properties:

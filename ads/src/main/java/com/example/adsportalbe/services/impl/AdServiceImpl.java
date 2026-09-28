@@ -19,6 +19,7 @@ import com.example.adsportalbe.specifications.AdSpecification;
 import com.example.adsportalbe.utils.Utils;
 import com.mk3.chatapp.enums.NotificationType;
 import com.mk3.chatapp.models.identity.User;
+import com.mk3.chatapp.pro.ProStatisticsService;
 import com.mk3.chatapp.utils.MessageMarkers;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,7 @@ public class AdServiceImpl implements AdService {
     private final PurchaseCommunicationService purchaseCommunicationService;
     private final AdCacheService adCacheService;
     private final AdMapper adMapper;
+    private final ProStatisticsService proStatistics;
 
     private static double refundableAmount(Ad ad) {
         if (ad.getReceipt().getAmountPaid() != null) {
@@ -547,6 +549,7 @@ public class AdServiceImpl implements AdService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public MonthlyRevenueResponseDto getMonthlyRevenueStats() {
         int currentYear = LocalDate.now().getYear();
 
@@ -565,20 +568,24 @@ public class AdServiceImpl implements AdService {
         // Build data for all 12 months
         List<MonthlyRevenueDto> data = new ArrayList<>();
         for (int i = 1; i <= 12; i++) {
+            LocalDate monthStart = LocalDate.of(currentYear, i, 1);
             data.add(MonthlyRevenueDto.builder()
                     .month(monthNames[i - 1])
                     .revenue(adRevenueByMonth.getOrDefault(i, 0.0))
                     .promotedRevenue(promotedRevenueByMonth.getOrDefault(i, 0.0))
                     .roomPromotedRevenue(roomPromotionRevenueByMonth.getOrDefault(i, 0.0))
+                    .subscriptionRevenue(proStatistics.revenueBetween(monthStart, monthStart.plusMonths(1)))
                     .build());
         }
 
         return MonthlyRevenueResponseDto.builder()
                 .data(data)
+                .subscriptionSynchronization(proStatistics.synchronization())
                 .build();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public WeeklyRevenueResponseDto getWeeklyRevenueStats() {
         LocalDate today = LocalDate.now();
         ZoneId zoneId = ZoneId.systemDefault();
@@ -613,11 +620,13 @@ public class AdServiceImpl implements AdService {
                     .revenue(adRevenueByDate.getOrDefault(date, 0.0))
                     .promotedRevenue(promotedRevenueByDate.getOrDefault(date, 0.0))
                     .roomPromotedRevenue(roomPromotionRevenueByDate.getOrDefault(date, 0.0))
+                    .subscriptionRevenue(proStatistics.revenueBetween(date, date.plusDays(1)))
                     .build());
         }
 
         return WeeklyRevenueResponseDto.builder()
                 .data(data)
+                .subscriptionSynchronization(proStatistics.synchronization())
                 .build();
     }
 }

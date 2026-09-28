@@ -35,9 +35,10 @@ admin `/appeals`).
 - `BanAppealAuditLog` (JOINED-inheritance subclass of `audit_logs`, discriminator
   `BAN_APPEAL_RESOLVE`): `appeal_id`, `ban_id`, `decision`. Rendered by
   `AuditLogCustomMapperImpl` as `BanAppealAuditLogDTO`.
-- Schema comes from `ddl-auto: create-drop` locally. **Prod note:** if the prod
-  schema is managed manually, the `ban_appeal` table, its unique constraint and
-  the `ban_appeal_audit_log` join table need explicit DDL.
+- The base, `dev`, and `prod` profiles use `ddl-auto: create-drop`. Hibernate
+  recreates entity tables on startup and drops them on shutdown, including
+  `ban_appeal`, its unique constraint, and `ban_appeal_audit_log`. Appeal records
+  are disposable in every profile; no manual SQL setup is required.
 
 ## API
 
@@ -155,4 +156,3 @@ retry queue in this codebase. Guests with no email rely on the status screen.
   ban*; message deletion at ban time may already have removed evidence.
 - Re-appeal cooldown for permanent bans (deliberately excluded for now: one
   appeal per ban, final).
-- Prod DDL/migration story once `ddl-auto` stops being `create-drop`.

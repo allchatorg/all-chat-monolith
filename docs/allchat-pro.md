@@ -35,40 +35,27 @@ See [font behavior](pro-fonts.md) and [sticker contracts](sticker-messages.md).
 
 ## Database deployment
 
-The `prod` profile (the default active profile) uses Hibernate `validate` and
-Quartz schema initialization `never`. The base and `dev` configuration files use
-`create-drop`. Live billing always requires persistent storage (`validate`,
-`none`, or `update`), including when a development profile is active.
-Use the following procedure when deploying against an existing persistent database.
+The base, `dev`, and `prod` configurations use Hibernate `ddl-auto: create-drop`.
+The `dev` and `prod` profiles use Quartz schema initialization `always`; `prod`
+is the default active profile.
+Every profile uses a disposable database: Hibernate recreates entity tables on
+startup and drops them on shutdown, and Quartz recreates its job tables on
+startup. Users, messages, billing projections, reporting history, queued emails,
+and scheduled jobs are reset. No manual SQL migrations are required.
 
-1. Back up the existing PostgreSQL database and quiesce writes.
-2. Check the **running old process's** Hibernate configuration. A process started
-   with `create-drop` can drop the schema when stopped, even if the next binary
-   uses `validate`. Stop it under the backup/restore procedure; restore the
-   existing schema/data afterward if necessary. Do not rely on changing the new
-   configuration to prevent the old process's shutdown DDL.
-3. Apply the migrations to the existing schema in this order:
-   [allchat-pro.sql](sql/allchat-pro.sql), [pro-account-limits.sql](sql/pro-account-limits.sql),
-   [pro-fonts.sql](sql/pro-fonts.sql), and [sticker-messages.sql](sql/sticker-messages.sql).
-   They preserve existing content, add defaults for existing users, and expand
-   message/edit-history storage. They do not baseline a new database or repair
-   unrelated application/Quartz schema drift.
-4. Start the new binary with production schema validation, billing disabled.
-   Validation must pass before accepting traffic. Retain the existing Quartz
-   tables; production must not initialize/drop them on restart.
-5. Confirm account/customer mappings survive a restart before enabling Checkout.
-6. Deploy the matching frontend after the backend. Older clients can ignore the
-   additive sticker/font fields; older frontends may display inline markers literally.
+Deploy the backend before the matching frontend. Older clients can ignore the
+additive sticker/font fields; older frontends may display inline markers literally.
+
+The billing guard remains in place: Checkout is unavailable under the current
+`prod` configuration, including with Stripe test keys. Disposable schemas permit
+Checkout only with test keys and `dev` active without `prod`. Live billing still
+requires persistent storage (`validate`, `none`, or `update`) and its explicit
+enablement flag.
 
 Allow 100 MiB files and multipart overhead through any reverse proxy. Application
 multipart caps are 100 MB per file and 110 MB per request. Keep the updated ClamAV
 stream/file caps (110M), scan cap (400M), and oversized-scan alerts from `compose.yml`
 so accepted files receive complete scanning. Advertising retains its own upload cap.
-
-The migration can be reapplied, but `IF NOT EXISTS` is not a schema repair tool.
-An incompatible pre-existing column/table must be resolved before startup.
-Leave the additive schema in place when rolling back code. Do not roll back to
-a binary/configuration that re-enables `create-drop`.
 
 ## Local development
 
@@ -81,8 +68,7 @@ against a disposable database.
 The saved IntelliJ `AllChatApplication` configuration selects `dev` and loads
 the backend's `env` file. Add the Stripe settings there and restart that
 configuration. Command-line launches must export the settings and explicitly
-select `dev`. Hibernate creates the Pro tables and columns, so this disposable
-development setup does not need the SQL migration above.
+select `dev`. Hibernate creates the Pro tables and columns automatically.
 
 Resetting the local database does not delete Stripe test customers or
 subscriptions. Cancel leftover test subscriptions in the Stripe Dashboard's
@@ -237,6 +223,84 @@ font choices reset on expiry and must be selected again.
 
 ## Verification
 
+### Subscription reporting deployment and recovery
+
+Deploy the backend before the dashboard frontend. Hibernate creates the
+`pro_subscription_payment` ledger and `pro_reporting_state` checkpoint from their
+entities. Both are reset by the configured `create-drop` application lifecycle.
+
+On the existing `/api/v1/pro/webhook` Stripe endpoint, add `charge.refunded`,
+`charge.refund.updated`, `refund.created`, `refund.updated`, and `refund.failed`
+alongside the existing `invoice.paid` and subscription events. Keep the API key,
+webhook secret, and original monthly/yearly price IDs configured even when
+sales are disabled. The API key requires read access to events, invoices,
+invoice lines, subscriptions, charges, and payment intents. The collector reads
+Stripe only; it never creates charges or refunds.
+
+The ledger records positive USD captured payments on verified allchat Pro
+invoices. It excludes free, unpaid, manually marked paid, and
+customer-credit-only invoices. Cash captured is capped at the invoice's
+actual amount paid. Subscription metadata must identify `allchat_feature=pro`
+and its `allchat_user_id`, the customer must match, and nonzero invoice lines
+must reference the subscription and configured Pro prices. Keep price IDs
+available while pending invoices may still need recovery. Ledger entries retain
+their verified account and invoice references after account deletion, subscription
+replacement, or price retirement.
+
+Successful refunds reduce revenue on the original invoice payment date, before
+Stripe fees; payment counts remain unchanged. The current charge is re-read
+under a reporting lock, so duplicate or reordered payment/refund events cannot
+apply the same refund twice. Revenue uses integer cents internally and USD
+decimal amounts in API responses. Reporting days use the server's default time
+zone, matching the dashboard's existing daily and weekly revenue boundaries;
+use the same time zone across application instances and the database.
+
+An independent scheduler processes up to 25 events per minute by default
+(`app.pro.reporting-delay-ms`). It saves a stable window of at most one day and
+a continuation cursor transactionally, overlaps completed windows by five
+minutes, and leaves one minute for Stripe event indexing. The recovery checkpoint
+is initialized once per database and stored with the ledger. A failed page rolls
+back both ledger updates and cursor advancement and is retried. The scheduler
+has its own thread so entitlement reconciliation cannot starve financial
+recovery. Verified webhook reporting identifiers are published before lifecycle
+deduplication and dispatched only after the billing transaction commits, on a
+separate single-thread worker with a bounded queue of 100 events. Neither Stripe
+financial reads nor the reporting lock run on the billing webhook thread.
+Worker failures mark reporting unavailable; rejected work during saturation or
+shutdown is logged. The database-backed event scanner recovers missed queue work
+independently of lifecycle-event deduplication while its ledger and checkpoint
+remain available. An application restart resets both under `create-drop`; the
+scanner does not restore deleted account mappings or guarantee recovery of the
+deleted financial history.
+
+`GET /api/v1/admin/pro/statistics?days=7|30|90` (default 90) is super-admin only
+and reads local data. It returns current membership counts, net revenue,
+daily initial/renewal/other payment counts, and synchronization metadata.
+Revenue includes `today`, `yesterday`, and `total`; total is the net sum of the
+ledger. Empty date ranges return zero revenue and payment counts.
+Active membership ignores public badge preferences and
+includes scheduled cancellations until paid entitlement expires. Deleted
+accounts are excluded from membership counts but retain their revenue.
+
+Users Management shows all recorded purchasers, including users who only bought
+message promotions, room promotions, or subscriptions. `totalSpent` combines
+captured ad and promotion receipts with subscription payments minus recorded
+refunds, in USD. Pending holds, canceled authorizations, and refunded receipts do
+not add to spending. Users with pending or fully refunded purchases remain in the
+list with zero spending. The list, its sorting and pagination, and user details
+use the same database calculation; subscription amounts reflect the local ledger.
+
+Synchronization status is `CATCHING_UP` until the first scan completes and recovery
+reaches within ten minutes of the present, `CURRENT` after it does, and `UNAVAILABLE` when Stripe
+is unconfigured or a recovery attempt fails. `lastSynchronizedAt` is the event
+time through which a completed scan has reconciled. Stripe's event API retains
+only 30 days; an older unscanned interval sets persistent `INCOMPLETE`, which
+takes priority over the other statuses and remains set after later successful
+scans. Investigate reporting warnings promptly. A known gap requires a separately
+reviewed financial repair from Stripe records; do not clear the flag to hide
+missing revenue. The dashboard labels partial reporting and
+suppresses unavailable totals instead of treating request failures as zero.
+
 Do not add new tests without an explicit request. Run the existing suites with
 `./mvnw verify`; frontend verification uses `npm run test:stickers`,
 `npm run test:fonts`, TypeScript, and a production build. A JVM that blocks Mockito
@@ -254,7 +318,7 @@ Manually verify in Stripe test mode before live enablement:
 * Cancel while a switch is scheduled; retry after provider failure. Confirm that
   settings reflects Stripe's actual state and never announces false success.
 * Duplicate/reordered webhook deliveries, missed-event reconciliation, delayed
-  payment confirmation, expiration, and restart with the same customer mapping.
+  payment confirmation, and expiration.
 * Restricted subscribers can view/cancel/manage payment details but cannot buy,
   upgrade, or reactivate. Account deletion cannot leave a recurring charge.
 * Two connected users: hide/show a badge; inspect old messages, replies,
@@ -286,11 +350,10 @@ No automated tests were created or run.
 | Expiry | With provider reconciliation deferred for a disposable fixture, the independent job changed visibility to false and incremented its revision within 30 seconds of expiry. |
 | Account deletion | A simulated missing billing customer caused cleanup to fail and retained the account/credentials. Retrying with the correct mapping canceled recurring charges, cleared pending billing, and then deleted the account. |
 | Ads integration | The existing payment-method endpoint returned the same saved test card and retained the shared Stripe customer ID. No advertising charge was created. |
-| Storage/restart | The additive SQL applied successfully to the isolated database. The final jar started with Hibernate `validate` and Quartz initialization `never`; customer/subscription state, hidden preference, badge revisions, and processed webhook IDs survived restart. |
+| Storage/restart | This earlier isolated run used persistent Hibernate and Quartz settings; customer/subscription state, hidden preference, badge revisions, and processed webhook IDs survived restart. The current disposable configuration resets that state. |
 | UI/builds | Desktop/mobile, light/dark, mobile scrolling/close control, initial focus, Escape dismissal, price selection, and appearance controls were inspected. TypeScript, the Next.js production build, and Maven verification with tests skipped passed. |
 
-The disposable paid subscriptions were canceled after verification. Repeat the
-deployment backup/restore procedure against the target environment before rollout.
+The disposable paid subscriptions were canceled after verification.
 Public webhook transport still needs verification on the deployed endpoint; the
 checks above signed real test-event payloads locally. The complete identity-surface
 layout matrix (including every DM/search/reaction variant, long names, and staff

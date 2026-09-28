@@ -24,6 +24,7 @@ import com.stripe.param.checkout.SessionCreateParams;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -64,6 +65,7 @@ public class ProBillingService {
     private final ObjectMapper objectMapper;
     private final IpService ipService;
     private final EntityManager entityManager;
+    private final ApplicationEventPublisher applicationEvents;
 
     @Transactional
     public ProSubscriptionSummary getOwnSubscription(boolean refresh) {
@@ -303,13 +305,21 @@ public class ProBillingService {
         } catch (SignatureVerificationException | IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Stripe webhook");
         }
-        if (!EVENTS.contains(event.getType()) || events.existsById(event.getId())) return;
         JsonNode object;
         try {
             object = objectMapper.readTree(payload).path("data").path("object");
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Stripe webhook payload");
         }
+        // Register before lifecycle deduplication. Financial work is dispatched only after commit,
+        // so neither its database lock nor Stripe reads can delay paid feature entitlement.
+        if (ProPaymentReportingService.supportsEvent(event.getType())) {
+            String chargeId = object.path("charge").isTextual() ? object.path("charge").asText()
+                    : object.path("charge").path("id").asText(null);
+            applicationEvents.publishEvent(new ProPaymentReportingEvent(event.getType(),
+                    object.path("id").asText(null), chargeId));
+        }
+        if (!EVENTS.contains(event.getType()) || events.existsById(event.getId())) return;
         String customerId = object.path("customer").isTextual()
                 ? object.path("customer").asText() : object.path("customer").path("id").asText(null);
         if (customerId == null) return;

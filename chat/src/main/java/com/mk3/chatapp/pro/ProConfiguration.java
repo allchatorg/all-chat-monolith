@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 @Component
 @Getter
@@ -24,6 +25,25 @@ public class ProConfiguration {
         scheduler.setPoolSize(1);
         scheduler.setThreadNamePrefix("pro-billing-");
         return scheduler;
+    }
+
+    @Bean(name = "proReportingTaskScheduler", defaultCandidate = false)
+    public ThreadPoolTaskScheduler proReportingTaskScheduler() {
+        var scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("pro-reporting-");
+        return scheduler;
+    }
+
+    @Bean(name = "proReportingWebhookExecutor", defaultCandidate = false)
+    public ThreadPoolTaskExecutor proReportingWebhookExecutor() {
+        var executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(1);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("pro-reporting-webhook-");
+        // Keep AbortPolicy: saturation must never run financial work on the webhook thread.
+        return executor;
     }
 
     @Value("${app.pro.enabled:false}")

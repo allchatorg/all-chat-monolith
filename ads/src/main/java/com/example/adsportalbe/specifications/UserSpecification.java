@@ -1,7 +1,7 @@
 package com.example.adsportalbe.specifications;
 
 import com.example.adsportalbe.dto.requests.UserSearchRequestDto;
-import com.mk3.chatapp.models.identity.User;
+import com.example.adsportalbe.models.identity.AdminUserSummary;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserSpecification {
-    public static Specification<User> getSpecification(UserSearchRequestDto filterDto) {
+    public static Specification<AdminUserSummary> getSpecification(UserSearchRequestDto filterDto) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -24,8 +24,8 @@ public class UserSpecification {
                                 "%" + filterDto.email().toLowerCase() + "%"));
             }
 
-            // The ads-portal user list only shows advertisers, not the whole user base.
-            predicates.add(criteriaBuilder.greaterThan(root.get("purchasedAdsCount"), 0L));
+            // Include purchasers of any product, even when their payments were refunded or are pending.
+            predicates.add(criteriaBuilder.isTrue(root.get("hasPurchases")));
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };

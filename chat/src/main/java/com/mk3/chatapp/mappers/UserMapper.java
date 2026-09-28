@@ -21,12 +21,18 @@ public interface UserMapper {
     @Mapping(target = "messageFont", source = "effectiveMessageFont")
     UserDTO toDto(User user);
 
-    /** Only authentication/account-owner responses may disclose hidden membership. */
+    /** Account-owner responses include membership and the public badge preference. */
     @Named("owner")
     @InheritConfiguration(name = "toDto")
     @Mapping(target = "proActive", expression = "java(user.isProActive())")
     @Mapping(target = "showProBadge", expression = "java(user.isShowProBadge())")
     UserDTO toOwnerDto(User user);
+
+    /** Restricted staff detail responses disclose membership, never billing details. */
+    @Named("moderation")
+    @InheritConfiguration(name = "toDto")
+    @Mapping(target = "proActive", expression = "java(user.isProActive())")
+    UserDTO toModerationDto(User user);
 
     @Mapping(target = "username", expression = "java(user.getApplicationUsername())")
     @Mapping(target = "usernameFont", source = "effectiveUsernameFont")

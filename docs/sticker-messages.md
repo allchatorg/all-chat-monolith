@@ -41,20 +41,18 @@ after Pro expires.
 Chat counts each complete inline marker as one UTF-16 character toward the
 account-specific visible limit (500 for Basic, 2,500 for Pro). The separate raw
 limit remains 2,000 for Basic and 10,000 for Pro. `content_plain` stores one U+FFFC
-placeholder per emoji to fit the 2,500-character column from the account-limits
-migration. Advertising parsing, limits, and pricing keep
+placeholder per emoji to fit the entity's 2,500-character column.
+Advertising parsing, limits, and pricing keep
 their existing `MessageMarkers` behavior. Inline emojis require no new column,
 migration, or billing configuration.
 
 ## Deployment
 
-Follow the combined migration order in [allchat Pro operations](allchat-pro.md).
-Apply `docs/sql/sticker-messages.sql` to an existing PostgreSQL database before
-deploying this backend, then deploy the matching frontend. Production uses
-Hibernate schema validation; the SQL migration is deliberately manual and
-adds only the nullable `messages.sticker_id` column. Existing rows require no
-backfill. No billing configuration changes are needed. The additive column
-can remain in place during rollback, preserving any already-sent stickers.
+Hibernate creates the nullable `messages.sticker_id` column from the message
+entity. The base, `dev`, and `prod` profiles recreate entity tables on startup
+and drop them on shutdown, so messages are disposable in every profile. See
+[database deployment](allchat-pro.md#database-deployment). No manual SQL or billing
+configuration changes are needed.
 Deploy the backend inline-emoji validation before enabling the matching
 frontend; older frontends may display canonical inline markers as text.
 

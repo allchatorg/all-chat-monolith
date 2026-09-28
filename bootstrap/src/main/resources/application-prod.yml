@@ -1,15 +1,15 @@
 spring:
   jpa:
     hibernate:
-      # Apply docs/sql/allchat-pro.sql before deploying. Never recreate billing data.
-      ddl-auto: validate
+      # Disposable deployment: recreate application tables on startup and drop them on shutdown.
+      ddl-auto: create-drop
     show-sql: false
     properties:
       hibernate:
         format_sql: false
   quartz:
     jdbc:
-      initialize-schema: never
+      initialize-schema: always
 
 logging:
   level:

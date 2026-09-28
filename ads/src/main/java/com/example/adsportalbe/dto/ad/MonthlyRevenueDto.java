@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @Builder
 @AllArgsConstructor
@@ -14,4 +16,5 @@ public class MonthlyRevenueDto {
     private Double revenue; // ad revenue only
     private Double promotedRevenue; // message promotions only
     private Double roomPromotedRevenue;
+    private BigDecimal subscriptionRevenue;
 }

@@ -94,14 +94,15 @@ Banned users may be disconnected from chat and unable to sign in, so email is th
 available delivery channel while their notification remains stored.
 
 Build verification does not send real email, charge cards, or exercise a live
-WebSocket session. Deployment needs the configured SMTP service, the outbox table,
-and the existing chat broker. The project's existing `ddl-auto: create-drop`
-configuration deletes database contents on lifecycle restarts; preserving queued
-emails across deployments requires a database/schema configuration that preserves
-application data.
+WebSocket session. Deployment needs the configured SMTP service and the existing
+chat broker. Hibernate creates the outbox from its entity. The base, `dev`, and
+`prod` profiles use `ddl-auto: create-drop`, recreating entity tables on startup
+and dropping them on shutdown. Queued emails and delivery records are disposable
+and reset across deployments; Quartz also recreates its job tables on startup
+in `dev` and `prod`.
 
 See [email delivery configuration and recovery](purchase-email-delivery.md) for
-worker settings, schema setup, retry behavior, and operational recovery.
+worker settings, database lifecycle, retry behavior, and operational recovery.
 
 ## Verification completed
 

@@ -3,7 +3,7 @@ package com.example.adsportalbe.services.impl;
 import com.example.adsportalbe.dto.AdminUserDto;
 import com.example.adsportalbe.dto.requests.SortDto;
 import com.example.adsportalbe.dto.requests.UserSearchRequestDto;
-import com.mk3.chatapp.models.identity.User;
+import com.example.adsportalbe.models.identity.AdminUserSummary;
 import com.example.adsportalbe.repositories.AdsUserRepository;
 import com.example.adsportalbe.services.AdminUserService;
 import com.example.adsportalbe.specifications.UserSpecification;
@@ -33,7 +33,8 @@ public class AdminUserServiceImpl implements AdminUserService {
     @Override
     @Transactional(readOnly = true)
     public AdminUserDto getUserById(Long id) {
-        return userRepository.findAdminUserById(id)
+        return userRepository.findById(id)
+                .map(this::toDto)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
@@ -46,19 +47,23 @@ public class AdminUserServiceImpl implements AdminUserService {
         int page = request.page() != null ? request.page() : 0;
         int size = request.size() != null ? request.size() : 10;
         Pageable pageable = PageRequest.of(page, size, sort);
-        Specification<User> spec = UserSpecification.getSpecification(request);
+        Specification<AdminUserSummary> spec = UserSpecification.getSpecification(request);
 
         return userRepository.findAll(spec, pageable)
-                .map(user -> AdminUserDto.builder()
-                        .id(user.getId())
-                        .firstName(user.getFirstName())
-                        .lastName(user.getLastName())
-                        .email(user.getEmail())
-                        .role(user.getRole())
-                        .totalPurchasedAdsCount(user.getPurchasedAdsCount())
-                        .totalSpent(user.getTotalSpent())
-                        .createdAt(user.getCreatedAt())
-                        .build());
+                .map(this::toDto);
+    }
+
+    private AdminUserDto toDto(AdminUserSummary user) {
+        return AdminUserDto.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .totalPurchasedAdsCount(user.getPurchasedAdsCount())
+                .totalSpent(user.getTotalSpent())
+                .createdAt(user.getCreatedAt())
+                .build();
     }
 
     private List<SortDto> jsonStringToSortDto(String jsonString) {

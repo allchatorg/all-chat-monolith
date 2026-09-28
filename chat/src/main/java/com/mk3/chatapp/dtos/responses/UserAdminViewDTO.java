@@ -20,5 +20,6 @@ public record UserAdminViewDTO(
                 List<String> previousUsernames,
                 Instant createdAt,
                 Instant lastLoginAt,
-                String countryCode) {
+                String countryCode,
+                boolean proActive) {
 }

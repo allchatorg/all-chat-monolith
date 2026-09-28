@@ -61,9 +61,9 @@ existing API. Reloading messages uses the authoritative database state.
 
 ## Deployment and verification
 
-No new database columns or migration are required. The earlier standalone
-sticker feature was not deployed; its message/history/promotion fields and
-unused SQL migration have been removed. Existing Pro billing setup is reused.
+Reaction support uses existing database fields and Pro billing setup. Hibernate
+creates the entity schema under the disposable configuration described in
+[allchat Pro operations](allchat-pro.md#database-deployment).
 
 Run the complete reactor tests and compile:
 
