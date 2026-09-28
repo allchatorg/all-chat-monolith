@@ -602,6 +602,7 @@ public class ProBillingService {
 
     private boolean eligible(User user) {
         boolean eligible = user.isClaimed() && !user.isBanned() && !Boolean.TRUE.equals(user.getDeleted())
+                && (user.getRole() == null || !user.getRole().isStaffMember())
                 && (user.getIdVerificationStatus() == null || user.getIdVerificationStatus() == IdVerificationStatus.NONE
                     || user.getIdVerificationStatus() == IdVerificationStatus.VERIFIED);
         if (!eligible) return false;
@@ -617,6 +618,9 @@ public class ProBillingService {
     }
 
     private void requireEligible(User user) {
+        if (user.getRole() != null && user.getRole().isStaffMember()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "allchat Pro is included with your staff role.");
+        }
         if (!eligible(user)) throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                 "Claim your account and complete any required verification before subscribing.");
     }

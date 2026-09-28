@@ -3,7 +3,7 @@ package com.mk3.chatapp.utils;
 import com.mk3.chatapp.models.AttachmentType;
 import com.mk3.chatapp.models.identity.User;
 
-/** Effective account limits; paid access is independent of the public badge preference. */
+/** Effective account limits; Pro access through payment or a staff role is independent of the public badge preference. */
 public final class AccountLimits {
     public static final int REGULAR_MESSAGE_LENGTH = 500;
     public static final int PRO_MESSAGE_LENGTH = 2500;

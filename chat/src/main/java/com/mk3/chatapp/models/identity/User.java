@@ -180,7 +180,8 @@ public class User extends Base implements UserDetails {
 
     @JsonIgnore
     public boolean isProActiveAt(Instant now) {
-        return !Boolean.TRUE.equals(getDeleted()) && proPaidThrough != null && proPaidThrough.isAfter(now);
+        return !Boolean.TRUE.equals(getDeleted()) &&
+                ((role != null && role.isStaffMember()) || (proPaidThrough != null && proPaidThrough.isAfter(now)));
     }
 
     public boolean isProBadgeVisible() {

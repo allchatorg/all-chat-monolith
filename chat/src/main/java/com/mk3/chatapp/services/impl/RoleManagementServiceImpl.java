@@ -7,7 +7,10 @@ import com.mk3.chatapp.enums.WebSocketMessageType;
 import com.mk3.chatapp.models.UserChatRoom;
 import com.mk3.chatapp.models.WebSocketMessage;
 import com.mk3.chatapp.models.identity.User;
+import com.mk3.chatapp.repositories.UserRepository;
 import com.mk3.chatapp.services.*;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,11 +28,17 @@ public class RoleManagementServiceImpl implements RoleManagementService {
     private final ChatRoomService chatRoomService;
     private final RoomActivityService roomActivityService;
     private final NotificationService notificationService;
+    private final UserRepository userRepository;
+    private final EntityManager entityManager;
+    private final ProBadgeService proBadgeService;
 
     @Transactional
     @Override
     public void updateUserRole(User user, Role role) {
         var admin = securityService.getCurrentUser();
+        // Share the subscription/font lock so demotion cannot restore stale paid access or appearance settings.
+        user = userRepository.findByIdForUpdate(user.getId()).orElseThrow();
+        entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
         validateRoleUpdate(user, role, admin);
         boolean isPromotion = user.getRole().getLevel() < role.getLevel();
         var previousRole = user.getRole();
@@ -37,6 +46,9 @@ public class RoleManagementServiceImpl implements RoleManagementService {
 
         user.setRole(role);
         userService.save(user);
+        if (previousRole.isStaffMember() != role.isStaffMember()) {
+            proBadgeService.refreshRoleEntitlement(user);
+        }
 
         // Broadcast role update notification to target user
         RoleUpdateNotificationDTO roleUpdateNotificationDTO = new RoleUpdateNotificationDTO(isPromotion, role);

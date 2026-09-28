@@ -26,11 +26,12 @@ public class ProBadgeService {
     private final EntityManager entityManager;
     private final ProFontService fonts;
 
-    /** Paid feature entitlement is independent of the public badge preference. */
+    /** Check current paid or staff access in the database, independent of cached roles and badge preferences. */
     @Transactional(readOnly = true)
     public boolean hasActiveEntitlement(Long userId) {
-        return userId != null && userRepository.findEligibleProPaidThrough(userId)
-                .filter(paidThrough -> paidThrough.isAfter(Instant.now())).isPresent();
+        return userId != null && (userRepository.findEligibleProPaidThrough(userId)
+                .filter(paidThrough -> paidThrough.isAfter(Instant.now())).isPresent()
+                || userRepository.hasStaffProAccess(userId));
     }
 
     /** Caller holds the user row lock, shared with all subscription mutations. */
@@ -47,6 +48,12 @@ public class ProBadgeService {
     @Transactional(propagation = Propagation.MANDATORY)
     public void refreshVisibility(User user) {
         persistVisibility(user, false);
+    }
+
+    /** Publish entitlement changes even when the user has hidden their public badge. Caller holds the row lock. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void refreshRoleEntitlement(User user) {
+        persistVisibility(user, true);
     }
 
     private void persistVisibility(User user, boolean forceRevision) {

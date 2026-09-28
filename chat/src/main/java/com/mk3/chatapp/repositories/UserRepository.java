@@ -39,6 +39,11 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
     @Query("select u.proPaidThrough from User u where u.id = :id and u.deleted = false and u.banned = false")
     Optional<Instant> findEligibleProPaidThrough(@Param("id") Long id);
 
+    @Query("select (count(u) > 0) from User u where u.id = :id and u.deleted = false and u.banned = false " +
+            "and u.role in (com.mk3.chatapp.enums.Role.MODERATOR, com.mk3.chatapp.enums.Role.ADMIN, " +
+            "com.mk3.chatapp.enums.Role.SUPER_ADMIN)")
+    boolean hasStaffProAccess(@Param("id") Long id);
+
     @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true)
     @Query("update User u set u.usernameFont = :usernameFont, u.messageFont = :messageFont, " +
             "u.fontRevision = :revision, u.fontChangesDate = :changesDate, u.fontChangesCount = :changesCount where u.id = :id")
@@ -68,7 +73,9 @@ public interface UserRepository extends JpaRepository<User, String>, JpaSpecific
     @Query("select u.id from User u where u.id > :afterId and (u.proBadgeLastPublishedVisible = true " +
             "or u.usernameFont <> com.mk3.chatapp.enums.FontPreset.DEFAULT " +
             "or u.messageFont <> com.mk3.chatapp.enums.FontPreset.DEFAULT) " +
-            "and (u.proPaidThrough <= :now or u.proPaidThrough is null or u.deleted = true) order by u.id")
+            "and (u.deleted = true or ((u.proPaidThrough <= :now or u.proPaidThrough is null) " +
+            "and u.role not in (com.mk3.chatapp.enums.Role.MODERATOR, com.mk3.chatapp.enums.Role.ADMIN, " +
+            "com.mk3.chatapp.enums.Role.SUPER_ADMIN))) order by u.id")
     List<Long> findExpiredProBadgeUserIds(@Param("now") Instant now, @Param("afterId") Long afterId,
                                          org.springframework.data.domain.Pageable pageable);
 
