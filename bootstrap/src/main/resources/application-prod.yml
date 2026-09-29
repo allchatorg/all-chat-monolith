@@ -1,7 +1,6 @@
 spring:
   jpa:
     hibernate:
-      # Disposable deployment: recreate application tables on startup and drop them on shutdown.
       ddl-auto: create-drop
     show-sql: false
     properties:

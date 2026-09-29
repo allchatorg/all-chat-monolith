@@ -6,9 +6,11 @@ import com.mk3.chatapp.services.SessionManagementService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.session.Session;
@@ -28,16 +30,23 @@ public class SessionManagementServiceImpl implements SessionManagementService {
 
     @Override
     public String establishAndLogAuthenticatedSession(Authentication authentication, HttpServletRequest request) {
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(authentication);
-        SecurityContextHolder.setContext(context);
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new IllegalArgumentException("An authenticated user is required to establish a session");
+        }
 
-        authentication.getName();
+        Long userId = Long.parseLong(authentication.getName());
+        // Keep JPA entities and their relationships out of the Redis-backed security context.
+        var principal = new User(authentication.getName(), "", authentication.getAuthorities());
+        var sessionAuthentication = new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities());
+
+        SecurityContext context = SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(sessionAuthentication);
+        SecurityContextHolder.setContext(context);
 
         HttpSession session = request.getSession(true);
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
 
-        Long userId = Long.parseLong(authentication.getName());
         String ipAddress = getClientIpAddress(request);
         String userAgent = request.getHeader("User-Agent");
         updateLastSessionInfo(userId, session.getId(), ipAddress, userAgent);
