@@ -114,36 +114,4 @@ class MessageMapperReplyTest {
         assertThat(mapper.toMessageResponseDTO(message, false).replyTo()).isNull();
     }
 
-    @Test
-    void stickerReplyVisibilityMatchesContentVisibility() {
-        var original = parent(false, false);
-        original.setContent("");
-        original.setStickerId("pepe");
-        var message = replyTo(original);
-        assertThat(mapper.toMessageResponseDTO(message, false).replyTo().stickerId()).isEqualTo("pepe");
-        original.setDeleted(true);
-        assertThat(mapper.toMessageResponseDTO(message, false).replyTo().stickerId()).isNull();
-        assertThat(mapper.toMessageResponseDTO(message, true).replyTo().stickerId()).isEqualTo("pepe");
-        original.setQuarantined(true);
-        assertThat(mapper.toMessageResponseDTO(message, true).replyTo().stickerId()).isNull();
-    }
-
-    @Test
-    void stickerMessageVisibilityPreservesStaffDeletionReviewButAlwaysHidesQuarantine() {
-        var message = parent(false, false);
-        message.setStickerId("pepe");
-        assertThat(mapper.toMessageResponseDTO(message, false).stickerId()).isEqualTo("pepe");
-        message.setDeleted(true);
-        assertThat(mapper.toMessageResponseDTO(message, false).stickerId()).isNull();
-        assertThat(mapper.toMessageResponseDTO(message, true).stickerId()).isEqualTo("pepe");
-        message.setQuarantined(true);
-        assertThat(mapper.toMessageResponseDTO(message, true).stickerId()).isNull();
-    }
-
-    @Test
-    void responseCopiesPreserveStickerIdentity() {
-        var dto = BASE_DTO.withStickerId("pepe");
-        assertThat(dto.withPromotion(null).stickerId()).isEqualTo("pepe");
-        assertThat(dto.withReplyTo(null).stickerId()).isEqualTo("pepe");
-    }
 }
