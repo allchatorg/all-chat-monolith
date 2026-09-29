@@ -22,5 +22,9 @@ public record ProSubscriptionSummary(
         Instant scheduledChangeAt,
         boolean checkoutPending,
         String checkoutInterval,
-        boolean canContinueCheckout) {
+        boolean canContinueCheckout,
+        String pendingInterval,
+        Instant pendingUpdateExpiresAt,
+        String pendingInvoiceId,
+        String renewalPaymentMethodId) {
 }

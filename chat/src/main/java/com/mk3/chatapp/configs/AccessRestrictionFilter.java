@@ -36,6 +36,18 @@ import static com.mk3.chatapp.utils.IpAddressUtils.getClientIpAddress;
 public class AccessRestrictionFilter extends OncePerRequestFilter {
 
     private static final String ANONYMOUS_USER = "anonymousUser";
+    // Existing customers retain payment maintenance during an account restriction.
+    // Purchase/checkout and plan changes are deliberately absent.
+    private static final Map<String, Set<String>> BILLING_MAINTENANCE_ENDPOINTS = Map.ofEntries(
+            Map.entry("/api/v1/pro/payment-methods", Set.of("GET")),
+            Map.entry("/api/v1/pro/payment-methods/setup-intent", Set.of("POST")),
+            Map.entry("/api/v1/pro/payment-methods/setup-complete", Set.of("POST")),
+            Map.entry("/api/v1/pro/payment-methods/*/default", Set.of("POST")),
+            Map.entry("/api/v1/pro/payment-methods/*", Set.of("DELETE")),
+            Map.entry("/api/v1/pro/invoices", Set.of("GET")),
+            Map.entry("/api/v1/pro/invoices/*/pdf", Set.of("GET")),
+            Map.entry("/api/v1/pro/invoices/*/pay", Set.of("POST"))
+    );
     private static final Map<String, Set<String>> ENDPOINT_ALLOWED_METHODS = Map.ofEntries(
             Map.entry("/api/v1/auth/**", Set.of("GET", "POST", "PUT", "DELETE", "PATCH")),
             Map.entry("/health", Set.of("GET")),
@@ -174,6 +186,7 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
     }
 
     private boolean isRequestOnAllowedEndpoint(String requestUri, String method) {
+        if (isBillingMaintenanceRequest(requestUri, method)) return true;
         for (Map.Entry<String, Set<String>> entry : ENDPOINT_ALLOWED_METHODS.entrySet()) {
             String pattern = entry.getKey();
             Set<String> allowedMethods = entry.getValue();
@@ -205,12 +218,19 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
     }
 
     private boolean isBannedUserAllowedRequest(String requestUri, String method) {
+        if (isBillingMaintenanceRequest(requestUri, method)) return true;
         for (Map.Entry<String, Set<String>> entry : BANNED_USER_ALLOWED_ENDPOINTS.entrySet()) {
             if (pathMatcher.match(entry.getKey(), requestUri)) {
                 return entry.getValue().contains(method.toUpperCase(Locale.ROOT));
             }
         }
         return false;
+    }
+
+    private boolean isBillingMaintenanceRequest(String requestUri, String method) {
+        return BILLING_MAINTENANCE_ENDPOINTS.entrySet().stream().anyMatch(entry ->
+                pathMatcher.match(entry.getKey(), requestUri)
+                        && entry.getValue().contains(method.toUpperCase(Locale.ROOT)));
     }
 
     private void respondWithBan(HttpServletResponse response, Ban ban) throws IOException {

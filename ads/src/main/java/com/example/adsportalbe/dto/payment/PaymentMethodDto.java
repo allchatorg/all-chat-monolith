@@ -1,5 +1,6 @@
 package com.example.adsportalbe.dto.payment;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,4 +17,8 @@ public class PaymentMethodDto {
     private Long expMonth;
     private Long expYear;
     private String cardholderName;
+    @JsonProperty("isDefault")
+    private boolean subscriptionDefault;
+    private boolean canRemove;
+    private String removalReason;
 }

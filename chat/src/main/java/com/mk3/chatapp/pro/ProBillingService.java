@@ -52,6 +52,7 @@ public class ProBillingService {
             "checkout.session.async_payment_succeeded", "checkout.session.async_payment_failed",
             "customer.subscription.created", "customer.subscription.updated", "customer.subscription.deleted",
             "customer.subscription.paused", "customer.subscription.resumed", "invoice.paid",
+            "customer.subscription.pending_update_applied", "customer.subscription.pending_update_expired",
             "invoice.payment_failed", "invoice.payment_action_required", "subscription_schedule.created",
             "subscription_schedule.updated", "subscription_schedule.released", "subscription_schedule.completed",
             "subscription_schedule.canceled", "subscription_schedule.aborted");
@@ -88,6 +89,19 @@ public class ProBillingService {
     // Checked Stripe failures commit the durable checkout attempt so a retry uses the same idempotency key.
     @Transactional(noRollbackFor = ResponseStatusException.class)
     public String createCheckout(String interval) throws StripeException {
+        Session checkout = createCheckoutSession(interval, false);
+        if (checkout.getUrl() == null) throw conflict("Continue checkout in the current allchat app.");
+        return checkout.getUrl();
+    }
+
+    @Transactional(noRollbackFor = ResponseStatusException.class)
+    public String createEmbeddedCheckout(String interval) throws StripeException {
+        Session checkout = createCheckoutSession(interval, true);
+        if (checkout.getClientSecret() == null) throw conflict("Checkout is being confirmed. Refresh subscription settings.");
+        return checkout.getClientSecret();
+    }
+
+    private Session createCheckoutSession(String interval, boolean embedded) throws StripeException {
         requireAvailable();
         if ("YEARLY".equals(interval)) requireYearlyBilling();
         User user = ownLockedUser();
@@ -99,11 +113,11 @@ public class ProBillingService {
         if (hasOpenSubscription(projection)) {
             if ("INCOMPLETE".equals(projection.getStatus()) && projection.getCheckoutSessionId() != null) {
                 Session pending = Session.retrieve(projection.getCheckoutSessionId(), config.requestOptions());
-                if ("open".equals(pending.getStatus()) && pending.getUrl() != null
+                if ("open".equals(pending.getStatus()) && checkoutMatchesMode(pending, embedded)
                         && Objects.equals(user.getStripeCustomerId(), pending.getCustomer())
                         && (pending.getSubscription() == null
                             || Objects.equals(projection.getStripeSubscriptionId(), pending.getSubscription()))) {
-                    if (interval.equals(projection.getCheckoutInterval())) return pending.getUrl();
+                    if (interval.equals(projection.getCheckoutInterval())) return pending;
                     throw conflict("Continue the existing checkout or cancel it before choosing a different plan.");
                 }
             }
@@ -112,9 +126,15 @@ public class ProBillingService {
 
         if (projection.getCheckoutSessionId() != null) {
             Session pending = Session.retrieve(projection.getCheckoutSessionId(), config.requestOptions());
+            if (!Objects.equals(user.getStripeCustomerId(), pending.getCustomer())) {
+                throw conflict("The billing account could not be verified.");
+            }
             if ("open".equals(pending.getStatus())) {
-                if (interval.equals(projection.getCheckoutInterval())) return pending.getUrl();
+                if (interval.equals(projection.getCheckoutInterval()) && checkoutMatchesMode(pending, embedded)) return pending;
                 pending.expire(config.requestOptions("pro-expire-" + pending.getId()));
+                // Expiration may race payment. Re-read Stripe before replacing an old hosted session.
+                reconcile(user, projection);
+                if (hasOpenSubscription(projection)) throw conflict("Your payment is being confirmed. Refresh subscription settings.");
             } else if ("complete".equals(pending.getStatus())) {
                 reconcile(user, projection);
                 throw conflict("Your payment is being confirmed. Refresh subscription settings shortly.");
@@ -127,8 +147,14 @@ public class ProBillingService {
         if (projection.getCheckoutAttemptId() != null && !interval.equals(projection.getCheckoutInterval())) {
             throw conflict("A previous checkout is still being confirmed. Please retry its selected plan.");
         }
+        if (projection.getCheckoutAttemptId() != null
+                && projection.getCheckoutAttemptId().startsWith("e1_") != embedded) {
+            // A timed-out old request may have created a hosted session. Its idempotency key must
+            // never be reused with different parameters or replaced while that session could pay.
+            throw conflict("Your previous checkout is still being confirmed. Refresh shortly or wait for it to expire.");
+        }
         if (projection.getCheckoutAttemptId() == null) {
-            projection.setCheckoutAttemptId(UUID.randomUUID().toString());
+            projection.setCheckoutAttemptId(embedded ? "e1_" + UUID.randomUUID().toString().replace("-", "") : UUID.randomUUID().toString());
             projection.setCheckoutInterval(interval);
             projection.setCheckoutExpiresAt(Instant.now().plusSeconds(3600));
             subscriptions.saveAndFlush(projection);
@@ -139,8 +165,6 @@ public class ProBillingService {
                 .putExtraParam("adaptive_pricing", Map.of("enabled", false))
                 .setCustomer(user.getStripeCustomerId())
                 .setClientReferenceId(user.getId().toString())
-                .setSuccessUrl(config.returnUrl() + "?pro=subscriptions&checkout=success")
-                .setCancelUrl(config.returnUrl() + "?pro=subscriptions&checkout=canceled")
                 .setExpiresAt(projection.getCheckoutExpiresAt().getEpochSecond())
                 .addPaymentMethodType(SessionCreateParams.PaymentMethodType.CARD)
                 .addLineItem(SessionCreateParams.LineItem.builder()
@@ -149,17 +173,28 @@ public class ProBillingService {
                 .putMetadata("allchat_user_id", user.getId().toString())
                 .setSubscriptionData(SessionCreateParams.SubscriptionData.builder()
                         .putMetadata("allchat_feature", "pro")
-                        .putMetadata("allchat_user_id", user.getId().toString()).build())
-                .build();
-        Session checkout = Session.create(params,
+                        .putMetadata("allchat_user_id", user.getId().toString()).build());
+        if (embedded) {
+            params.setUiMode(SessionCreateParams.UiMode.EMBEDDED)
+                    .setRedirectOnCompletion(SessionCreateParams.RedirectOnCompletion.NEVER);
+        } else {
+            params.setSuccessUrl(config.returnUrl() + "?pro=subscriptions&checkout=success")
+                    .setCancelUrl(config.returnUrl() + "?pro=subscriptions&checkout=canceled");
+        }
+        Session checkout = Session.create(params.build(),
                 config.requestOptions("pro-checkout-" + projection.getCheckoutAttemptId()));
         projection.setCheckoutSessionId(checkout.getId());
         subscriptions.save(projection);
-        if (!"open".equals(checkout.getStatus()) || checkout.getUrl() == null) {
+        if (!"open".equals(checkout.getStatus()) || !checkoutMatchesMode(checkout, embedded)) {
             reconcile(user, projection);
             throw conflict("Your checkout has already completed or expired. Refresh subscription settings.");
         }
-        return checkout.getUrl();
+        return checkout;
+    }
+
+    private boolean checkoutMatchesMode(Session checkout, boolean embedded) {
+        return embedded ? "embedded".equals(checkout.getUiMode()) && checkout.getClientSecret() != null
+                : !"embedded".equals(checkout.getUiMode()) && checkout.getUrl() != null;
     }
 
     @Transactional(noRollbackFor = ResponseStatusException.class)
@@ -214,6 +249,7 @@ public class ProBillingService {
         reconcile(user, projection);
         Subscription subscription = existingSubscription(projection);
         if (subscription != null && !TERMINAL.contains(subscription.getStatus())) {
+            subscription = voidPendingUpgrade(subscription);
             releaseSchedule(subscription);
             if ("incomplete".equals(subscription.getStatus())) {
                 // Stripe does not allow cancel_at_period_end updates before the first payment succeeds.
@@ -273,6 +309,7 @@ public class ProBillingService {
             if (locked.getStripeCustomerId() != null) {
                 for (Subscription subscription : listProSubscriptions(locked)) {
                     if (TERMINAL.contains(subscription.getStatus())) continue;
+                    subscription = voidPendingUpgrade(subscription);
                     releaseSchedule(subscription);
                     subscription.cancel(SubscriptionCancelParams.builder().setInvoiceNow(false).setProrate(false).build(),
                             config.requestOptions("pro-delete-" + subscription.getId()));
@@ -361,7 +398,7 @@ public class ProBillingService {
         }
     }
 
-    private void reconcile(User user, ProSubscription projection) throws StripeException {
+    void reconcile(User user, ProSubscription projection) throws StripeException {
         if (user.getStripeCustomerId() == null) return;
         if (!config.isYearlyBillingEnabled() && "YEARLY".equals(projection.getCheckoutInterval())
                 && projection.getCheckoutSessionId() != null) {
@@ -393,7 +430,7 @@ public class ProBillingService {
         subscriptions.save(projection);
     }
 
-    private List<Subscription> listProSubscriptions(User user) throws StripeException {
+    List<Subscription> listProSubscriptions(User user) throws StripeException {
         var result = new java.util.ArrayList<Subscription>();
         var collection = Subscription.list(SubscriptionListParams.builder().setCustomer(user.getStripeCustomerId())
                 .setStatus(SubscriptionListParams.Status.ALL).setLimit(100L).build(), config.requestOptions());
@@ -471,6 +508,19 @@ public class ProBillingService {
         }
     }
 
+    private Subscription voidPendingUpgrade(Subscription subscription) throws StripeException {
+        if (subscription.getPendingUpdate() == null || subscription.getLatestInvoice() == null) return subscription;
+        Invoice invoice = Invoice.retrieve(subscription.getLatestInvoice(), config.requestOptions());
+        if (!Objects.equals(subscription.getCustomer(), invoice.getCustomer())
+                || !Objects.equals(subscription.getId(), invoice.getSubscription())) {
+            throw conflict("The pending billing change could not be verified.");
+        }
+        if ("open".equals(invoice.getStatus())) {
+            invoice.voidInvoice(config.requestOptions("pro-void-pending-" + invoice.getId()));
+        }
+        return Subscription.retrieve(subscription.getId(), config.requestOptions());
+    }
+
     private void expireCheckout(ProSubscription projection) throws StripeException {
         if (projection.getCheckoutSessionId() != null) {
             Session checkout = Session.retrieve(projection.getCheckoutSessionId(), config.requestOptions());
@@ -497,16 +547,14 @@ public class ProBillingService {
         projection.setCheckoutExpiresAt(null);
     }
 
-    private void validateCatalog() throws StripeException {
+    void validateCatalog() throws StripeException {
         Price monthly = Price.retrieve(config.getMonthlyPriceId(), config.requestOptions());
         if (!validPrice(monthly, 500L, "month") || monthly.getProduct() == null) throw unavailable();
-        validatePortalConfiguration(config.getBillingPortalConfigurationId(), false);
         if (config.isYearlyBillingEnabled()) {
             Price yearly = Price.retrieve(config.getYearlyPriceId(), config.requestOptions());
             if (!validPrice(yearly, 5000L, "year") || !monthly.getProduct().equals(yearly.getProduct())) {
                 throw unavailable();
             }
-            validatePortalConfiguration(config.getSwitchPortalConfigurationId(), true);
         }
     }
 
@@ -551,6 +599,32 @@ public class ProBillingService {
     }
 
     private ProSubscriptionSummary summary(User user, ProSubscription projection) {
+        Subscription.PendingUpdate pendingUpdate = null;
+        String pendingInvoiceId = null;
+        String renewalPaymentMethodId = null;
+        boolean providerStateKnown = true;
+        if (config.hasApiKey() && projection != null && projection.getStripeSubscriptionId() != null
+                && hasOpenSubscription(projection)) {
+            try {
+                Subscription remote = existingSubscription(projection);
+                pendingUpdate = remote.getPendingUpdate();
+                if (pendingUpdate != null) pendingInvoiceId = remote.getLatestInvoice();
+                renewalPaymentMethodId = remote.getDefaultPaymentMethod();
+                if (renewalPaymentMethodId == null && user.getStripeCustomerId() != null) {
+                    Customer customer = Customer.retrieve(user.getStripeCustomerId(), config.requestOptions());
+                    if (customer.getInvoiceSettings() != null) {
+                        renewalPaymentMethodId = customer.getInvoiceSettings().getDefaultPaymentMethod();
+                    }
+                }
+            } catch (StripeException e) {
+                providerStateKnown = false;
+                log.warn("Pro pending change refresh failed for user {} ({})", user.getId(), e.getClass().getSimpleName());
+            }
+        }
+        String pendingInterval = pendingUpdate != null && pendingUpdate.getSubscriptionItems() != null
+                ? pendingUpdate.getSubscriptionItems().stream().filter(item -> item.getPrice() != null)
+                    .map(item -> config.intervalForPrice(item.getPrice().getId())).filter(Objects::nonNull).findFirst().orElse(null)
+                : null;
         boolean available = config.billingAvailable();
         boolean eligible = eligible(user);
         boolean pending = projection != null && projection.getCheckoutAttemptId() != null
@@ -565,10 +639,9 @@ public class ProBillingService {
                 && (!open || ("INCOMPLETE".equals(projection.getStatus()) && projection.getCheckoutSessionId() != null));
         return new ProSubscriptionSummary(available, config.isYearlyBillingEnabled(),
                 available && eligible && !open && !pendingDisabledYearly,
-                config.hasApiKey() && user.getStripeCustomerId() != null && projection != null
-                        && config.getBillingPortalConfigurationId() != null && !config.getBillingPortalConfigurationId().isBlank(),
+                config.hasApiKey() && user.getStripeCustomerId() != null && projection != null,
                 available && config.isYearlyBillingEnabled() && eligible && active && !canceling
-                        && projection.getStripeScheduleId() == null,
+                        && projection.getStripeScheduleId() == null && pendingUpdate == null && providerStateKnown,
                 available && eligible && open && canceling,
                 projection == null ? "NONE" : pending && !open ? "PENDING" : projection.getStatus(),
                 projection == null ? null : projection.getBillingInterval(), user.isProActive(), user.isShowProBadge(),
@@ -576,7 +649,9 @@ public class ProBillingService {
                 projection == null ? null : projection.getCurrentPeriodEnd(), user.getProPaidThrough(), canceling,
                 projection == null ? null : projection.getScheduledInterval(),
                 projection == null ? null : projection.getScheduledChangeAt(), pending,
-                pending ? projection.getCheckoutInterval() : null, continueCheckout);
+                pending ? projection.getCheckoutInterval() : null, continueCheckout,
+                pendingInterval, pendingUpdate == null ? null : instant(pendingUpdate.getExpiresAt()), pendingInvoiceId,
+                renewalPaymentMethodId);
     }
 
     private boolean hasOpenSubscription(ProSubscription projection) {
@@ -584,7 +659,7 @@ public class ProBillingService {
                 && !Set.of("CANCELED", "INCOMPLETE_EXPIRED", "NONE").contains(projection.getStatus());
     }
 
-    private User ownLockedUser() {
+    User ownLockedUser() {
         User authenticated = securityService.getCurrentUser();
         if (authenticated == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to manage Pro");
         User user = users.findByIdForUpdate(authenticated.getId()).orElseThrow();
@@ -592,7 +667,7 @@ public class ProBillingService {
         return user;
     }
 
-    private ProSubscription projection(User user) {
+    ProSubscription projection(User user) {
         return subscriptions.findById(user.getId()).orElseGet(() -> {
             ProSubscription subscription = new ProSubscription();
             subscription.setUserId(user.getId());
@@ -617,7 +692,7 @@ public class ProBillingService {
         return true;
     }
 
-    private void requireEligible(User user) {
+    void requireEligible(User user) {
         if (user.getRole() != null && user.getRole().isStaffMember()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "allchat Pro is included with your staff role.");
         }
@@ -625,17 +700,17 @@ public class ProBillingService {
                 "Claim your account and complete any required verification before subscribing.");
     }
 
-    private void requireAvailable() {
+    void requireAvailable() {
         if (!config.billingAvailable()) throw unavailable();
     }
 
-    private void requireYearlyBilling() {
+    void requireYearlyBilling() {
         if (!config.isYearlyBillingEnabled()) {
             throw conflict("Yearly billing is not available right now. Please choose the monthly plan.");
         }
     }
 
-    private void requireProvider() {
+    void requireProvider() {
         if (!config.hasApiKey()) throw unavailable();
     }
 

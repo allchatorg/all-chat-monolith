@@ -69,8 +69,7 @@ public class ProConfiguration {
         boolean live = hasValue(apiKey) && (apiKey.startsWith("sk_live_") || apiKey.startsWith("rk_live_"));
         return enabled && hasApiKey() && (!live || liveEnabled)
                 && hasValue(webhookSecret) && hasValue(monthlyPriceId)
-                && hasValue(billingPortalConfigurationId)
-                && (!yearlyBillingEnabled || (hasValue(yearlyPriceId) && hasValue(switchPortalConfigurationId)));
+                && (!yearlyBillingEnabled || hasValue(yearlyPriceId));
     }
 
     public String priceId(String interval) {

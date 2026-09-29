@@ -2,6 +2,7 @@ package com.example.adsportalbe.services.impl;
 
 import com.example.adsportalbe.dto.payment.PaymentMethodDto;
 import com.mk3.chatapp.services.StripeCustomerService;
+import com.mk3.chatapp.services.BillingPaymentMethodService;
 import com.example.adsportalbe.services.PaymentService;
 import com.mk3.chatapp.models.identity.User;
 import com.stripe.Stripe;
@@ -23,6 +24,7 @@ import java.util.List;
 public class PaymentServiceImpl implements PaymentService {
 
     private final StripeCustomerService stripeCustomerService;
+    private final BillingPaymentMethodService billingCards;
     @Value("${STRIPE_API_KEY}")
     private String stripeApiKey;
 
@@ -38,58 +40,22 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public List<PaymentMethodDto> getPaymentMethods(User user) throws StripeException {
-        String customerId = createCustomer(user); // Ensure customer exists
-
-        PaymentMethodListParams params = PaymentMethodListParams.builder()
-                .setCustomer(customerId)
-                .setType(PaymentMethodListParams.Type.CARD)
-                .build();
-
-        PaymentMethodCollection paymentMethods = PaymentMethod.list(params);
-
-        List<PaymentMethodDto> dtos = new ArrayList<>();
-        for (PaymentMethod pm : paymentMethods.getData()) {
-            if (pm.getCard() != null) {
-                dtos.add(PaymentMethodDto.builder()
-                        .id(pm.getId())
-                        .brand(pm.getCard().getBrand())
-                        .last4(pm.getCard().getLast4())
-                        .expMonth(pm.getCard().getExpMonth())
-                        .expYear(pm.getCard().getExpYear())
-                        .cardholderName(pm.getBillingDetails() != null ? pm.getBillingDetails().getName() : null)
-                        .build());
-            }
-        }
-        return dtos;
+        return billingCards.list(user).stream().map(card -> PaymentMethodDto.builder()
+                .id(card.id()).brand(card.brand()).last4(card.last4())
+                .expMonth(card.expMonth()).expYear(card.expYear()).cardholderName(card.cardholderName())
+                .subscriptionDefault(card.isDefault()).canRemove(card.canRemove())
+                .removalReason(card.removalReason()).build()).toList();
     }
 
     @Override
     public void addPaymentMethod(User user, String paymentMethodId) throws StripeException {
-        String customerId = createCustomer(user);
-
-        PaymentMethod paymentMethod = PaymentMethod.retrieve(paymentMethodId);
-
-        PaymentMethodAttachParams params = PaymentMethodAttachParams.builder()
-                .setCustomer(customerId)
-                .build();
-
-        paymentMethod.attach(params);
+        // Kept for older clients; card attachment now happens only after Stripe verifies a SetupIntent.
+        billingCards.saveLegacyCard(user, paymentMethodId);
     }
 
     @Override
     public void removePaymentMethod(User user, String paymentMethodId) throws StripeException {
-        // First verify this card belongs to the user
-        PaymentMethod paymentMethod = PaymentMethod.retrieve(paymentMethodId);
-
-        // Basic check to ensure we are not deleting someone else's card if the ID is
-        // guessed
-        // (Stripe IDs are distinct, but good detailed check)
-        String customerId = createCustomer(user);
-        if (!customerId.equals(paymentMethod.getCustomer())) {
-            throw new IllegalArgumentException("Payment method does not belong to the user");
-        }
-
-        paymentMethod.detach();
+        billingCards.remove(user, paymentMethodId);
     }
 
     @Override

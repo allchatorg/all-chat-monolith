@@ -13,6 +13,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
+import com.stripe.exception.StripeException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -21,6 +23,24 @@ import java.util.Map;
 @RestControllerAdvice(basePackages = "com.example.adsportalbe")
 @Slf4j
 public class GlobalExceptionHandler {
+
+        @ExceptionHandler(ResponseStatusException.class)
+        public ResponseEntity<ErrorResponse> handleStatus(ResponseStatusException ex, HttpServletRequest request) {
+                return ResponseEntity.status(ex.getStatusCode()).body(ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now()).status(ex.getStatusCode().value())
+                                .error("Request could not be completed").message(ex.getReason())
+                                .path(request.getRequestURI()).build());
+        }
+
+        @ExceptionHandler(StripeException.class)
+        public ResponseEntity<ErrorResponse> handlePaymentProvider(StripeException ex, HttpServletRequest request) {
+                log.warn("Payment provider failed (type={}, code={}, requestId={})",
+                                ex.getClass().getSimpleName(), ex.getCode(), ex.getRequestId());
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ErrorResponse.builder()
+                                .timestamp(LocalDateTime.now()).status(HttpStatus.BAD_GATEWAY.value())
+                                .error("Billing unavailable").message("Billing is temporarily unavailable. Please try again.")
+                                .path(request.getRequestURI()).build());
+        }
 
         @ExceptionHandler(MethodArgumentNotValidException.class)
         public ResponseEntity<ErrorResponse> handleValidationExceptions(

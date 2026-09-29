@@ -3,6 +3,9 @@ package com.mk3.chatapp.pro;
 import com.stripe.exception.StripeException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -16,12 +19,16 @@ import org.springframework.web.server.ResponseStatusException;
 @Slf4j
 public class ProController {
     private final ProBillingService service;
+    private final ProBillingManagementService management;
 
     public enum Interval { MONTHLY, YEARLY }
     public enum PortalFlow { billing, switch_plan }
     public record CheckoutRequest(@NotNull Interval interval) { }
     public record PortalRequest(@NotNull PortalFlow flow) { }
     public record RedirectResponse(String url) { }
+    public record EmbeddedCheckoutResponse(String clientSecret) { }
+    public record PlanConfirmationRequest(@NotBlank @Size(max = 4096) String previewToken) { }
+    public record InvoicePaymentRequest(@Pattern(regexp = "pm_[A-Za-z0-9]+") String paymentMethodId) { }
 
     @GetMapping("/subscription")
     public ProSubscriptionSummary subscription(@RequestParam(defaultValue = "false") boolean refresh) {
@@ -31,6 +38,40 @@ public class ProController {
     @PostMapping("/checkout")
     public RedirectResponse checkout(@Valid @RequestBody CheckoutRequest request) {
         return providerCall(() -> new RedirectResponse(service.createCheckout(request.interval().name())));
+    }
+
+    @PostMapping("/checkout/embedded")
+    public EmbeddedCheckoutResponse embeddedCheckout(@Valid @RequestBody CheckoutRequest request) {
+        return providerCall(() -> new EmbeddedCheckoutResponse(service.createEmbeddedCheckout(request.interval().name())));
+    }
+
+    @GetMapping("/invoices")
+    public ProBillingManagementService.InvoicePage invoices(@RequestParam(required = false) String startingAfter) {
+        return providerCall(() -> management.invoices(startingAfter));
+    }
+
+    @GetMapping(value = "/invoices/{invoiceId}/pdf", produces = "application/pdf")
+    public ResponseEntity<byte[]> invoicePdf(@PathVariable String invoiceId) {
+        return providerCall(() -> ResponseEntity.ok()
+                .header("Cache-Control", "no-store")
+                .header("Content-Disposition", "attachment; filename=allchat-invoice.pdf")
+                .body(management.invoicePdf(invoiceId)));
+    }
+
+    @PostMapping("/invoices/{invoiceId}/pay")
+    public ProBillingManagementService.PaymentResult payInvoice(@PathVariable String invoiceId,
+            @Valid @RequestBody(required = false) InvoicePaymentRequest request) {
+        return providerCall(() -> management.payInvoice(invoiceId, request == null ? null : request.paymentMethodId()));
+    }
+
+    @PostMapping("/plan-change/preview")
+    public ProBillingManagementService.PlanPreview previewPlan(@Valid @RequestBody CheckoutRequest request) {
+        return providerCall(() -> management.preview(request.interval().name()));
+    }
+
+    @PostMapping("/plan-change/confirm")
+    public ProBillingManagementService.PaymentResult confirmPlan(@Valid @RequestBody PlanConfirmationRequest request) {
+        return providerCall(() -> management.confirm(request.previewToken()));
     }
 
     @PostMapping("/portal")
