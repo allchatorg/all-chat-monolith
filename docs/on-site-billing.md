@@ -9,7 +9,7 @@ Deploy the backend before the frontend. The backend keeps the hosted Checkout an
 - Customer Portal configuration IDs are only needed by legacy portal routes, not the new on-site controls.
 - `APP_FRONTEND_URL` must identify the canonical frontend origin, including its scheme. Legacy billing returns and authentication returns must reach the same origin used to sign in. Do not transfer session tokens between origins.
 - Keep the existing subscription/invoice/checkout/schedule webhook events and include `customer.subscription.pending_update_applied` and `customer.subscription.pending_update_expired`.
-- Verify the effective production `spring.jpa.hibernate.ddl-auto` setting before restarting. Checked-in profiles use `create-drop`; environment overrides may change that. This implementation does not alter schema policy. Do not start against a persistent database merely to run a billing smoke check.
+- Verify the effective production `spring.jpa.hibernate.ddl-auto` setting before restarting. The base configuration uses `update`, but the checked-in dev and prod profiles override it with `create-drop`, recreating application tables on startup and dropping them on shutdown. Environment overrides may change that. Do not start against a persistent database merely to run a billing smoke check.
 
 ## Billing behavior
 
