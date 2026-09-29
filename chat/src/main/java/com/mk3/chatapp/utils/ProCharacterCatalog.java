@@ -6,7 +6,8 @@ import java.util.Set;
 public final class ProCharacterCatalog {
     private static final Set<String> IDS = Set.of(
             "wojak", "soyjak", "chud", "chad-1", "chad-2", "virgin", "doomer", "coomer",
-            "bloomer", "zoomer", "npc", "grug", "pepe", "apu-apustaja", "honkler", "spurdo", "gondola");
+            "bloomer", "zoomer", "npc", "grug", "pepe", "apu-apustaja", "honkler", "spurdo", "gondola",
+            "big-brain-wojak", "dumb-wojak", "gigachad", "rage-pepe", "smug-pepe", "smug-wojak", "soyjak-2");
 
     private ProCharacterCatalog() {
     }

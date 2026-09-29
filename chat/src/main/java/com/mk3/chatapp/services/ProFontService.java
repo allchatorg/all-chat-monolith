@@ -49,6 +49,9 @@ public class ProFontService {
         if (request == null || request.usernameFont() == null || request.messageFont() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose both font presets");
         }
+        if (!request.usernameFont().isSelectable() || !request.messageFont().isSelectable()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose an available font preset");
+        }
         User user = users.findByIdForUpdate(userId).orElseThrow(ProFontService::accountNotFound);
         entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
         Instant now = clock.instant();
@@ -95,8 +98,8 @@ public class ProFontService {
         LocalDate today = now.atZone(ZoneOffset.UTC).toLocalDate();
         int used = today.equals(user.getFontChangesDate()) ? user.getFontChangesCount() : 0;
         boolean active = user.isProActiveAt(now);
-        return new FontSettingsDTO(active ? user.getUsernameFont() : FontPreset.DEFAULT,
-                active ? user.getMessageFont() : FontPreset.DEFAULT, user.getFontRevision(), active, DAILY_LIMIT,
+        return new FontSettingsDTO(active ? user.getUsernameFont().availableOrDefault() : FontPreset.DEFAULT,
+                active ? user.getMessageFont().availableOrDefault() : FontPreset.DEFAULT, user.getFontRevision(), active, DAILY_LIMIT,
                 Math.max(0, DAILY_LIMIT - used), today.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
     }
 

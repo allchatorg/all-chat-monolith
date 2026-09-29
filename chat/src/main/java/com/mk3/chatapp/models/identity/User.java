@@ -136,13 +136,13 @@ public class User extends Base implements UserDetails {
     @JsonIgnore
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(name = "username_font", nullable = false, length = 16, updatable = false)
+    @Column(name = "username_font", nullable = false, length = 32, updatable = false)
     private FontPreset usernameFont = FontPreset.DEFAULT;
 
     @JsonIgnore
     @Builder.Default
     @Enumerated(EnumType.STRING)
-    @Column(name = "message_font", nullable = false, length = 16, updatable = false)
+    @Column(name = "message_font", nullable = false, length = 32, updatable = false)
     private FontPreset messageFont = FontPreset.DEFAULT;
 
     @Column(name = "font_revision", nullable = false, updatable = false)
@@ -166,11 +166,11 @@ public class User extends Base implements UserDetails {
     }
 
     public FontPreset getEffectiveUsernameFont() {
-        return isProActive() ? getUsernameFont() : FontPreset.DEFAULT;
+        return isProActive() ? getUsernameFont().availableOrDefault() : FontPreset.DEFAULT;
     }
 
     public FontPreset getEffectiveMessageFont() {
-        return isProActive() ? getMessageFont() : FontPreset.DEFAULT;
+        return isProActive() ? getMessageFont().availableOrDefault() : FontPreset.DEFAULT;
     }
 
     @JsonIgnore
