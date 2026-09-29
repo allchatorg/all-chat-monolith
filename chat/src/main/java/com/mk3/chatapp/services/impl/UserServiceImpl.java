@@ -449,7 +449,11 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserDTO getUserInfo(Principal connectedUser) {
-        var user = getPrincipal(connectedUser);
+        if (connectedUser == null) {
+            throw new org.springframework.security.authentication.AuthenticationCredentialsNotFoundException("Session is missing");
+        }
+        var user = userRepository.findById(Long.parseLong(connectedUser.getName()))
+                .orElseThrow(() -> new org.springframework.security.authentication.AuthenticationCredentialsNotFoundException("Session account no longer exists"));
         user.setLastSeen(Instant.now());
         return userMapper.toOwnerDto(save(user));
     }

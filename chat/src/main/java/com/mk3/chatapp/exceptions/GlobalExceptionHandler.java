@@ -6,9 +6,12 @@ import com.mk3.chatapp.dtos.AccountLimitErrorDTO;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -166,11 +169,23 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(Exception.class)
     public ErrorDTO handleGenericException(Exception ex) {
-        log.error("Unhandled exception", ex);
+        log.error("Unhandled exception requestId={}", MDC.get("requestId"), ex);
         return new ErrorDTO(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
                 "An unexpected error occurred",
                 LocalDateTime.now());
+    }
+
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ExceptionHandler(AuthenticationCredentialsNotFoundException.class)
+    public ErrorDTO handleMissingSession(AuthenticationCredentialsNotFoundException ex) {
+        return new ErrorDTO(401, "Unauthorized", "Please sign in to continue", LocalDateTime.now());
+    }
+
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ExceptionHandler(AccessDeniedException.class)
+    public ErrorDTO handleAccessDenied(AccessDeniedException ex) {
+        return new ErrorDTO(403, "Forbidden", "You do not have access to this resource", LocalDateTime.now());
     }
 }
