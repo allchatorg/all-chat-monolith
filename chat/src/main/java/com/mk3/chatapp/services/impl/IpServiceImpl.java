@@ -1,6 +1,8 @@
 package com.mk3.chatapp.services.impl;
 
 import com.mk3.chatapp.enums.RequiredVerificationEnum;
+import com.mk3.chatapp.events.TypingAccessChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import com.mk3.chatapp.enums.Role;
 import com.mk3.chatapp.models.Ip;
 import com.mk3.chatapp.repositories.IpRepository;
@@ -23,6 +25,7 @@ public class IpServiceImpl implements IpService {
 
     private final IpServiceImpl self;
     private final IpRepository ipRepository;
+    private final ApplicationEventPublisher typingAccessEvents;
 
     // Disables the extra email/phone verification tiers for flagged IPs
     // (REST filter, WebSocket interceptor, rate limits and registration
@@ -48,7 +51,9 @@ public class IpServiceImpl implements IpService {
                 .requiredVerification(requiredVerification)
                 .build();
 
-        return self.saveIp(ipEntry);
+        var saved = self.saveIp(ipEntry);
+        typingAccessEvents.publishEvent(new TypingAccessChangedEvent(null, null));
+        return saved;
     }
 
     @Cacheable(value = "ipCache", key = "#ip")
@@ -88,4 +93,3 @@ public class IpServiceImpl implements IpService {
         };
     }
 }
-

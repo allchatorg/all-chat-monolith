@@ -1,6 +1,8 @@
 package com.mk3.chatapp.services.impl;
 
 import com.mk3.chatapp.exceptions.AccountLimitExceededException;
+import com.mk3.chatapp.events.TypingAccessChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 
 import com.mk3.chatapp.dtos.responses.RoomPopulationDTO;
 import com.mk3.chatapp.dtos.responses.UserChatRoomDTO;
@@ -37,6 +39,7 @@ public class UserChatRoomServiceImpl implements UserChatRoomService {
     private final MessageMapper messageMapper;
     private final MessagesService messagesService;
     private final UserAccountLockService userAccountLockService;
+    private final ApplicationEventPublisher events;
 
     @Override
     @Transactional
@@ -94,6 +97,7 @@ public class UserChatRoomServiceImpl implements UserChatRoomService {
         userChatRoom.ifPresentOrElse(userChatRoom1 -> {
             userChatRoom1.setDeleted(true);
             userChatRoomRepository.save(userChatRoom1);
+            events.publishEvent(new TypingAccessChangedEvent(userChatRoom1.getUser().getId(), userChatRoom1.getChatRoom().getId()));
         }, () -> {
             throw new RuntimeException("User chat room not found with id: " + id);
         });
@@ -103,6 +107,7 @@ public class UserChatRoomServiceImpl implements UserChatRoomService {
     public void leaveChatRoom(User user, ChatRoom chatRoom) {
         var userChatRoom = findByUserAndChatRoom(user, chatRoom);
         userChatRoomRepository.delete(userChatRoom);
+        events.publishEvent(new TypingAccessChangedEvent(user.getId(), chatRoom.getId()));
     }
 
     @Override
@@ -126,6 +131,7 @@ public class UserChatRoomServiceImpl implements UserChatRoomService {
 
         if (!invalidUserChatRooms.isEmpty()) {
             userChatRoomRepository.deleteAll(invalidUserChatRooms);
+            events.publishEvent(new TypingAccessChangedEvent(user.getId(), null));
         }
 
         return validUserChatRooms;

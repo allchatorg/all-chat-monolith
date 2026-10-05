@@ -20,6 +20,7 @@ public class WebSocketMessage {
 
     @JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
     @JsonSubTypes({
+            @JsonSubTypes.Type(value = TypingUpdateDTO.class, name = "TYPING_UPDATE"),
             @JsonSubTypes.Type(value = ProBadgeDTO.class, name = "PRO_BADGE_UPDATED"),
             @JsonSubTypes.Type(value = MessageResponseDTO.class, name = "NEW_MESSAGE"),
             @JsonSubTypes.Type(value = RoomPopulationDTO.class, name = "POPULARITY_UPDATE"),

@@ -3,6 +3,12 @@ package com.mk3.chatapp.configs;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import com.mk3.chatapp.services.TypingService;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.converter.DefaultContentTypeResolver;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
@@ -25,16 +31,20 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final HandshakeInterceptor handshakeInterceptor;
     private final UserInterceptor userInterceptor;
+    private final TypingChannelInterceptor typingChannelInterceptor;
+    private final ObjectProvider<TypingService> typingService;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic", "/queue");
         config.setApplicationDestinationPrefixes("/app");
         config.setUserDestinationPrefix("/user");
+        config.setPreservePublishOrder(true);
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.setPreserveReceiveOrder(true);
         registry.addEndpoint("/ws")
                 .addInterceptors(handshakeInterceptor)
                 .setAllowedOriginPatterns("*")
@@ -59,6 +69,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(userInterceptor);
+        registration.interceptors(typingChannelInterceptor, userInterceptor);
+    }
+
+    @Override
+    public void configureClientOutboundChannel(ChannelRegistration registration) {
+        registration.interceptors(new ChannelInterceptor() {
+            @Override
+            public Message<?> preSend(Message<?> message, MessageChannel channel) {
+                var headers = message.getHeaders();
+                String destination = SimpMessageHeaderAccessor.getDestination(headers);
+                if (destination != null && destination.startsWith(TypingService.TOPIC_PREFIX)
+                        && !typingService.getObject().canReceive(SimpMessageHeaderAccessor.getSessionId(headers),
+                        SimpMessageHeaderAccessor.getSubscriptionId(headers), destination)) return null;
+                return message;
+            }
+        });
     }
 }

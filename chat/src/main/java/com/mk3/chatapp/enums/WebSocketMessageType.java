@@ -1,6 +1,7 @@
 package com.mk3.chatapp.enums;
 
 public enum WebSocketMessageType {
+    TYPING_UPDATE,
     NEW_MESSAGE,
     PRO_BADGE_UPDATED,
     POPULARITY_UPDATE,

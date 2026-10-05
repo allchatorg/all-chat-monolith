@@ -52,6 +52,8 @@ public class UserInterceptor implements ChannelInterceptor {
         }
 
         if (StompCommand.SEND.equals(accessor.getCommand())) {
+            // Typing has an early rate limit and its own full permission check. Avoid duplicate DB reads.
+            if (com.mk3.chatapp.services.TypingService.DESTINATION.equals(accessor.getDestination())) return message;
             Long userId = resolveUserId(accessor);
 
             if (isActiveUserBan(userId)) {

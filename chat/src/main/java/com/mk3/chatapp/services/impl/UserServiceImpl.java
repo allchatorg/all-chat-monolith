@@ -1,5 +1,8 @@
 package com.mk3.chatapp.services.impl;
 
+import com.mk3.chatapp.events.TypingAccessChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
+
 import com.mk3.chatapp.dtos.ResetPasswordRequestDTO;
 import com.mk3.chatapp.dtos.TagDTO;
 import com.mk3.chatapp.dtos.requests.*;
@@ -46,6 +49,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
+    private final ApplicationEventPublisher typingAccessEvents;
     public static final Instant STALE_ACCOUNT_DELETION_CUTOFF_TIME = Instant.now().minusSeconds(7 * 24 * 60 * 60);
     private final UserRepository userRepository;
     private final BanRepository banRepository;
@@ -509,6 +513,7 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         sessionManagementService.expireUserSessions(user.getId());
+        typingAccessEvents.publishEvent(new TypingAccessChangedEvent(user.getId(), null));
     }
 
     @Override
@@ -590,6 +595,8 @@ public class UserServiceImpl implements UserService {
         if (!user.getBlockedUsers().contains(userToBlock)) {
             user.getBlockedUsers().add(userToBlock);
             save(user);
+            typingAccessEvents.publishEvent(new TypingAccessChangedEvent(user.getId(), null));
+            typingAccessEvents.publishEvent(new TypingAccessChangedEvent(userToBlock.getId(), null));
         }
     }
 
