@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface WebSocketBroadcastService {
 
-    void broadcastToChatRoom(String roomName, WebSocketMessage webSocketMessage);
+    void broadcastToChatRoom(Long roomId, WebSocketMessage webSocketMessage);
 
     void broadcastToPublicChat(WebSocketMessage webSocketMessage);
 

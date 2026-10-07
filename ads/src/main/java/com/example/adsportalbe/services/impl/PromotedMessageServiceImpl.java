@@ -693,7 +693,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
                     .chatRoomName(promotion.getChatRoomName())
                     .data(event)
                     .build();
-            webSocketBroadcastService.broadcastToChatRoom(promotion.getChatRoomName(), webSocketMessage);
+            webSocketBroadcastService.broadcastToChatRoom(promotion.getChatRoomId(), webSocketMessage);
             // Also notify the owner directly so their portal pages update even
             // when the room topic isn't subscribed (duplicate delivery is
             // harmless — the client-side handling is idempotent).

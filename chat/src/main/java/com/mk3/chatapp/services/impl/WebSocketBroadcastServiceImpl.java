@@ -19,18 +19,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class WebSocketBroadcastServiceImpl implements WebSocketBroadcastService {
     private static final String PUBLIC_CHAT_DESTINATION = "/topic/public-chat";
-    private static final String CHAT_ROOM_DESTINATION = "/topic/chat-room.";
+    private static final String CHAT_ROOM_DESTINATION = "/topic/chat-room-id.";
     private static final String USER_TOPIC_DESTINATION = "/topic/user.";
     private static final String PRIVATE_MESSAGES_QUEUE = "/queue/private-messages";
     private final SimpMessagingTemplate simpMessagingTemplate;
     private final ApplicationEventPublisher events;
 
     @Override
-    public void broadcastToChatRoom(String roomName, WebSocketMessage payload) {
+    public void broadcastToChatRoom(Long roomId, WebSocketMessage payload) {
         if (payload.getType() == WebSocketMessageType.CHATROOM_ARCHIVED && payload.getData() instanceof ChatRoomDTO room) {
             events.publishEvent(new TypingAccessChangedEvent(null, room.id()));
         }
-        String destination = CHAT_ROOM_DESTINATION + roomName;
+        String destination = CHAT_ROOM_DESTINATION + roomId;
         simpMessagingTemplate.convertAndSend(destination, payload);
     }
 

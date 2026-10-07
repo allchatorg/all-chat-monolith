@@ -287,11 +287,11 @@ public class BanServiceImpl implements BanService {
         Long userId = ban.getUser().getId();
         userChatRooms.forEach(userChatRoom -> {
             String roomName = userChatRoom.getChatRoom().getName();
-            var banNotifier = new BanUserNotificationDTO(userId, roomName, ban.getType(), deleteMessages,
+            var banNotifier = new BanUserNotificationDTO(userId, userChatRoom.getChatRoom().getId(), roomName, ban.getType(), deleteMessages,
                     deleteMessagesAfter != null ? deleteMessagesAfter.toString() : null);
             var socketMessage = new WebSocketMessage(WebSocketMessageType.BAN_USER_CHAT_NOTIFICATION, roomName,
                     banNotifier);
-            webSocketBroadcastService.broadcastToChatRoom(roomName, socketMessage);
+            webSocketBroadcastService.broadcastToChatRoom(userChatRoom.getChatRoom().getId(), socketMessage);
         });
     }
 }

@@ -3,6 +3,9 @@ package com.mk3.chatapp.configs;
 import com.mk3.chatapp.enums.IdVerificationStatus;
 import com.mk3.chatapp.enums.RequiredVerificationEnum;
 import com.mk3.chatapp.repositories.UserRepository;
+import com.mk3.chatapp.repositories.ChatRoomRepository;
+import com.mk3.chatapp.repositories.UserChatRoomRepository;
+import com.mk3.chatapp.enums.ChatRoomType;
 import com.mk3.chatapp.services.BanCacheService;
 import com.mk3.chatapp.services.IpService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +29,8 @@ public class UserInterceptor implements ChannelInterceptor {
     private final IpService ipService;
     private final BanCacheService banCacheService;
     private final UserRepository userRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final UserChatRoomRepository userChatRoomRepository;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -51,7 +56,28 @@ public class UserInterceptor implements ChannelInterceptor {
             }
         }
 
+        String destination = accessor.getDestination();
+        if (StompCommand.SUBSCRIBE.equals(accessor.getCommand()) && destination != null
+                && destination.startsWith("/topic/chat-room")) {
+            if (!destination.matches("/topic/chat-room-id\\.[1-9][0-9]*")) return null;
+            try {
+                Long userId = resolveUserId(accessor);
+                var user = userId == null ? null : userRepository.findById(userId).orElse(null);
+                Long roomId = Long.valueOf(destination.substring("/topic/chat-room-id.".length()));
+                var room = chatRoomRepository.findById(roomId).orElse(null);
+                if (user == null || room == null || Boolean.TRUE.equals(user.getDeleted())
+                        || Boolean.TRUE.equals(room.getDeleted()) || isActiveUserBan(userId)
+                        || room.getType() != ChatRoomType.PUBLIC
+                        || room.getRequiredAccessLevel().getLevel() > user.getRole().getLevel()
+                        || (room.isArchived() && !user.getRole().isStaffMember())) return null;
+                var membership = userChatRoomRepository.findUserChatRoomByUserAndChatRoom(user, room).orElse(null);
+                if (membership == null || Boolean.TRUE.equals(membership.getDeleted())) return null;
+            } catch (RuntimeException invalidSubscription) {
+                return null;
+            }
+        }
         if (StompCommand.SEND.equals(accessor.getCommand())) {
+            if (destination != null && (destination.startsWith("/topic/") || destination.startsWith("/queue/"))) return null;
             // Typing has an early rate limit and its own full permission check. Avoid duplicate DB reads.
             if (com.mk3.chatapp.services.TypingService.DESTINATION.equals(accessor.getDestination())) return message;
             Long userId = resolveUserId(accessor);

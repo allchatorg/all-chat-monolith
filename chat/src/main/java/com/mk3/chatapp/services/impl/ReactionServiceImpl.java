@@ -227,6 +227,7 @@ public class ReactionServiceImpl implements ReactionService {
         List<Long> recipients = privateRoom ? userChatRoomRepository.findByChatRoom(room).stream()
                 .map(member -> member.getUser().getId()).toList() : List.of();
         String roomName = room.getName();
+        Long roomId = room.getId();
         WebSocketMessage payload = new WebSocketMessage(WebSocketMessageType.MESSAGE_REACTION_UPDATE,
                 privateRoom ? null : roomName, response);
         Runnable publish = () -> {
@@ -250,7 +251,7 @@ public class ReactionServiceImpl implements ReactionService {
                 }
             } else {
                 try {
-                    webSocketBroadcastService.broadcastToChatRoom(roomName, payload);
+                    webSocketBroadcastService.broadcastToChatRoom(roomId, payload);
                 } catch (RuntimeException exception) {
                     log.error("Failed to broadcast reaction for message {}", response.messageId(), exception);
                 }

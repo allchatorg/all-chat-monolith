@@ -220,7 +220,7 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
         var chatRoom = chatRoomService.findById(roomId);
         chatRoomService.archiveChatRoom(roomId);
         roomActivityService.markRoomAsArchived(roomId.toString());
-        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getName(),
+        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getId(),
                 new WebSocketMessage(WebSocketMessageType.CHATROOM_ARCHIVED, chatRoom.getName(),
                         buildChatRoomStatusPayload(chatRoom.getId(), chatRoom.getName(), true)));
         auditLogService.logArchiveChatRoom("ARCHIVE_CHATROOM", "Archived chat room: " + chatRoom.getName(), roomId, chatRoom.getName());
@@ -261,7 +261,7 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
         var chatRoom = chatRoomService.findById(roomId);
         chatRoomService.unarchiveChatRoom(roomId);
         roomActivityService.markRoomAsUnarchived(roomId.toString());
-        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getName(),
+        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getId(),
                 new WebSocketMessage(WebSocketMessageType.CHATROOM_UNARCHIVED, chatRoom.getName(),
                         buildChatRoomStatusPayload(chatRoom.getId(), chatRoom.getName(), false)));
         auditLogService.logUnarchiveChatRoom("UNARCHIVE_CHATROOM", "Unarchived chat room: " + chatRoom.getName(), roomId, chatRoom.getName());

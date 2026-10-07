@@ -165,7 +165,7 @@ public class MessagesServiceImpl implements MessagesService {
                 .data(messageDTO)
                 .build();
 
-        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getName(), webSocketMessage);
+        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getId(), webSocketMessage);
         return messageDTO;
     }
 
@@ -498,7 +498,7 @@ public class MessagesServiceImpl implements MessagesService {
                 .data(messageDTO)
                 .build();
 
-        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getName(), webSocketMessage);
+        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getId(), webSocketMessage);
     }
 
     @Transactional
@@ -630,7 +630,7 @@ public class MessagesServiceImpl implements MessagesService {
                 .data(messageResponseDTO)
                 .build();
 
-        webSocketBroadcastService.broadcastToChatRoom(messageResponseDTO.chatRoomName(), webSocketMessage);
+        webSocketBroadcastService.broadcastToChatRoom(messageResponseDTO.chatRoomId(), webSocketMessage);
 
         return messageResponseDTO;
     }

@@ -69,7 +69,7 @@ public class HeartbeatCleanupTask {
                         .data(population)
                         .build();
 
-                webSocketBroadcastService.broadcastToChatRoom(population.roomName(), webSocketMessage);
+                webSocketBroadcastService.broadcastToChatRoom(population.roomId(), webSocketMessage);
             }
         }
     }

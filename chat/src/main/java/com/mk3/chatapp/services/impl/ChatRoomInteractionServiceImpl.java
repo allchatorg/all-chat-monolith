@@ -85,7 +85,7 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
         var webSocketMessage = WebSocketMessage.builder().type(WebSocketMessageType.POPULARITY_UPDATE)
                 .chatRoomName(chatRoom.getName()).data(roomPopulation).build();
 
-        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getName(), webSocketMessage);
+        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getId(), webSocketMessage);
 
         return new UserChatRoomDTO(userChatRoom.getId(), chatRoom.getName(), chatRoom.getRequiredAccessLevel(),
                 chatRoom.getId(), roomPopulation, null, null, lastMessage);
@@ -110,7 +110,7 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
         var webSocketMessage = WebSocketMessage.builder().type(WebSocketMessageType.POPULARITY_UPDATE)
                 .chatRoomName(chatRoom.getName()).data(roomPopulation).build();
 
-        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getName(), webSocketMessage);
+        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getId(), webSocketMessage);
     }
 
     @Override
@@ -134,7 +134,7 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
         var webSocketMessage = WebSocketMessage.builder().type(WebSocketMessageType.POPULARITY_UPDATE)
                 .chatRoomName(chatRoom.getName()).data(roomPopulation).build();
 
-        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getName(), webSocketMessage);
+        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getId(), webSocketMessage);
 
         return roomPopulation;
     }
@@ -156,7 +156,7 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
         var webSocketMessage = WebSocketMessage.builder().type(WebSocketMessageType.POPULARITY_UPDATE)
                 .chatRoomName(chatRoom.getName()).data(roomPopulation).build();
 
-        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getName(), webSocketMessage);
+        webSocketBroadcastService.broadcastToChatRoom(chatRoom.getId(), webSocketMessage);
     }
 
     @Override
@@ -189,7 +189,7 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
             var webSocketMessage = WebSocketMessage.builder().type(WebSocketMessageType.POPULARITY_UPDATE)
                     .chatRoomName(chatRoom.getName()).data(population).build();
 
-            webSocketBroadcastService.broadcastToChatRoom(chatRoom.getName(), webSocketMessage);
+            webSocketBroadcastService.broadcastToChatRoom(chatRoom.getId(), webSocketMessage);
         }
     }
 
@@ -204,7 +204,7 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
             var webSocketMessage = WebSocketMessage.builder().type(WebSocketMessageType.POPULARITY_UPDATE)
                     .chatRoomName(chatRoom.getName()).data(population).build();
 
-            webSocketBroadcastService.broadcastToChatRoom(chatRoom.getName(), webSocketMessage);
+            webSocketBroadcastService.broadcastToChatRoom(chatRoom.getId(), webSocketMessage);
         }
     }
 
@@ -238,7 +238,7 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
                         .chatRoomName(chatRoom.getName())
                         .data(population)
                         .build();
-                webSocketBroadcastService.broadcastToChatRoom(chatRoom.getName(), webSocketMessage);
+                webSocketBroadcastService.broadcastToChatRoom(chatRoom.getId(), webSocketMessage);
             }
         }
     }
