@@ -13,6 +13,7 @@ import com.mk3.chatapp.services.AttachmentService;
 import com.mk3.chatapp.services.ChatRoomService;
 import com.mk3.chatapp.services.MessageEditHistoryService;
 import com.mk3.chatapp.services.RoomActivityService;
+import com.mk3.chatapp.services.RoomParticipationService;
 import com.mk3.chatapp.services.WebSocketBroadcastService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,7 @@ class MessagesServiceImplReplyTest {
     @Mock private AttachmentService attachmentService;
     @Mock private ChatRoomService chatRoomService;
     @Mock private UserChatRoomRepository userChatRoomRepository;
+    @Mock private RoomParticipationService roomParticipationService;
 
     @InjectMocks private MessagesServiceImpl service;
 
