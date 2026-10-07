@@ -17,6 +17,7 @@ public record PromotedRoomDTO(
         Long totalMessagesCount,
         ChatRoomNoiseLevelEnum noiseLevel,
         boolean archived,
+        boolean proOnly,
         Instant promotedAt
 ) {
     public static PromotedRoomDTO from(RoomPopulationDTO population, Instant promotedAt) {
@@ -28,6 +29,7 @@ public record PromotedRoomDTO(
                 population.totalMessagesCount(),
                 population.noiseLevel(),
                 population.archived(),
+                population.proOnly(),
                 promotedAt);
     }
 }

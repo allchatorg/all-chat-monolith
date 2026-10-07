@@ -1,5 +1,7 @@
 package com.example.adsportalbe.services.impl;
 
+import com.mk3.chatapp.services.RoomParticipationService;
+
 import com.example.adsportalbe.dto.payment.PaymentMethodDto;
 import com.example.adsportalbe.dto.promotion.PromotedRevenueDailyResponseDto;
 import com.example.adsportalbe.dto.promotion.PromotedRevenueSummaryDto;
@@ -62,6 +64,7 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
     private static final List<RoomPromotionStatus> ACTIVE_STATUSES =
             List.of(RoomPromotionStatus.PENDING, RoomPromotionStatus.APPROVED);
 
+    private final RoomParticipationService roomParticipationService;
     private final RoomPromotionRepository roomPromotionRepository;
     private final PaymentReceiptRepository paymentReceiptRepository;
     private final PaymentService paymentService;
@@ -121,6 +124,7 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
         }
 
         ChatRoom chatRoom = chatRoomService.findById(request.chatRoomId());
+        roomParticipationService.requireParticipation(chatRoom, user);
 
         if (chatRoom.getType() == ChatRoomType.PRIVATE) {
             throw new IllegalArgumentException("Private chat rooms cannot be promoted");
@@ -640,6 +644,7 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
                 promotion.getId(),
                 promotion.getChatRoom().getId(),
                 promotion.getChatRoomName(),
+                promotion.getChatRoom().isProOnly(),
                 promotion.getStatus(),
                 promotion.getAmount(),
                 promotion.getCurrency(),
@@ -657,6 +662,7 @@ public class RoomPromotionServiceImpl implements RoomPromotionService {
                 promotion.getId(),
                 chatRoom.getId(),
                 promotion.getChatRoomName(),
+                promotion.getChatRoom().isProOnly(),
                 chatRoom.isArchived(),
                 promotion.getStatus(),
                 promotion.getCanceledBy(),

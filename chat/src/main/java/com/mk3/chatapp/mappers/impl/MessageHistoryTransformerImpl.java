@@ -71,7 +71,9 @@ public class MessageHistoryTransformerImpl implements MessageHistoryTransformer 
                 sender != null ? sender.getProBadgeRevision() : 0L,
                 sender != null ? sender.getEffectiveUsernameFont() : com.mk3.chatapp.enums.FontPreset.DEFAULT,
                 sender != null ? sender.getEffectiveMessageFont() : com.mk3.chatapp.enums.FontPreset.DEFAULT,
-                sender != null ? sender.getFontRevision() : 0L
+                sender != null ? sender.getFontRevision() : 0L,
+                null,
+                chatRoom != null && chatRoom.isProOnly()
         );
     }
 

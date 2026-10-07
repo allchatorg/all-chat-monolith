@@ -56,6 +56,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
             List.of(PromotedMessageStatus.PENDING, PromotedMessageStatus.APPROVED);
     private static final int SNIPPET_LENGTH = 80;
 
+    private final com.mk3.chatapp.services.RoomParticipationService roomParticipationService;
     private final PromotedMessageRepository promotedMessageRepository;
     private final PaymentReceiptRepository paymentReceiptRepository;
     private final MessageRepository messageRepository;
@@ -120,6 +121,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
         if (message.getStickerId() != null) {
             throw new IllegalArgumentException("Sticker messages cannot be promoted");
         }
+        roomParticipationService.requireParticipation(message.getChatRoom(), user);
         if (message.getChatRoom().getType() == ChatRoomType.PRIVATE) {
             throw new IllegalArgumentException("Messages in private chat rooms cannot be promoted");
         }
@@ -712,6 +714,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
                 snippet(promotion.getMessage().getContent()),
                 promotion.getChatRoomId(),
                 promotion.getChatRoomName(),
+                promotion.getMessage().getChatRoom().isProOnly(),
                 promotion.getStatus(),
                 promotion.getAmount(),
                 promotion.getCurrency(),
@@ -736,6 +739,7 @@ public class PromotedMessageServiceImpl implements PromotedMessageService {
                 attachments,
                 promotion.getChatRoomId(),
                 promotion.getChatRoomName(),
+                promotion.getMessage().getChatRoom().isProOnly(),
                 promotion.getStatus(),
                 promotion.getCanceledBy(),
                 promotion.getReason(),

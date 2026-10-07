@@ -7,5 +7,6 @@ import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring", uses = {MessageMapper.class})
 public interface ChatRoomMapper {
+    @org.mapstruct.Mapping(target = "isArchived", source = "archived")
     ChatRoomDTO toChatRoomDTO(ChatRoom chatRoom);
 }

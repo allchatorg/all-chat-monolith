@@ -51,6 +51,7 @@ public class MessagesServiceImpl implements MessagesService {
     private final MessageEditHistoryMapper messageEditHistoryMapper;
     private final AttachmentService attachmentService;
     private final ChatRoomService chatRoomService;
+    private final RoomParticipationService roomParticipationService;
     private final UserChatRoomRepository userChatRoomRepository;
     private final MessagePromotionEnrichmentService messagePromotionEnrichmentService;
     private final ProStickerService proStickerService;
@@ -140,7 +141,7 @@ public class MessagesServiceImpl implements MessagesService {
                 messageResponseDTO.senderUsernameFont(),
                 messageResponseDTO.senderMessageFont(),
                 messageResponseDTO.senderFontRevision(),
-                messageResponseDTO.stickerId());
+                messageResponseDTO.stickerId(), messageResponseDTO.chatRoomProOnly());
     }
 
     @Override
@@ -183,6 +184,7 @@ public class MessagesServiceImpl implements MessagesService {
             throw new IllegalStateException("User must be authenticated to send messages");
         }
 
+        roomParticipationService.requireParticipation(chatRoom, user);
         chatRoomService.validateRoomIsNotArchived(chatRoom, "send messages");
         String content = messageRequestDTO.content() == null ? "" : messageRequestDTO.content();
         if (messageRequestDTO.stickerId() != null) {
@@ -505,6 +507,7 @@ public class MessagesServiceImpl implements MessagesService {
     @Override
     public Message editMessage(Long messageId, String content, User user) {
         var message = findById(messageId);
+        roomParticipationService.requireParticipation(message.getChatRoom(), user);
         if (!Objects.equals(user.getId(), message.getSender().getId())) {
             throw new IllegalArgumentException(
                     "Messages of other users cannot be edited" + messageId);
@@ -532,6 +535,7 @@ public class MessagesServiceImpl implements MessagesService {
     @Override
     public Message removeAttachmentFromMessage(Long messageId, Long attachmentId, User user) {
         var message = findById(messageId);
+        roomParticipationService.requireParticipation(message.getChatRoom(), user);
         if (!Objects.equals(user.getId(), message.getSender().getId())) {
             throw new IllegalArgumentException(
                     "Messages of other users cannot be removed" + messageId);

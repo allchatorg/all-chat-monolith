@@ -66,9 +66,14 @@ public class RoomActivityServiceImpl implements RoomActivityService {
     // =======================
 
     @Override
-    public void storeRoomMetadata(String roomId, String roomName) {
+    public void storeRoomMetadata(String roomId, String roomName, boolean proOnly) {
         String metadataKey = String.format(KEY_ROOM_METADATA, roomId);
         redisTemplate.opsForValue().set(metadataKey, roomName);
+        redisTemplate.opsForValue().set(metadataKey + ":proOnly", Boolean.toString(proOnly));
+    }
+
+    private boolean isProOnly(String roomId) {
+        return Boolean.parseBoolean(redisTemplate.opsForValue().get(String.format(KEY_ROOM_METADATA, roomId) + ":proOnly"));
     }
 
     private String getRoomName(String roomId) {
@@ -231,7 +236,7 @@ public class RoomActivityServiceImpl implements RoomActivityService {
         long totalMessages = getMessageCount(roomId);
         long messagesLastHour = getMessagesLastHour(roomId);
         return new RoomPopulationDTO(Long.parseLong(roomId), getRoomName(roomId), 0L, 0L, totalMessages,
-                determineNoiseLevel(messagesLastHour), true);
+                determineNoiseLevel(messagesLastHour), true, isProOnly(roomId));
     }
 
     @Override
@@ -272,7 +277,7 @@ public class RoomActivityServiceImpl implements RoomActivityService {
         long totalMessages = getMessageCount(roomId);
 
         return new RoomPopulationDTO(Long.parseLong(roomId), roomName, activeCount, onlineCount, totalMessages,
-                noiseLevel, false);
+                noiseLevel, false, isProOnly(roomId));
     }
 
     @Override
@@ -297,7 +302,7 @@ public class RoomActivityServiceImpl implements RoomActivityService {
         long totalMessages = getMessageCount(roomId);
 
         return new RoomPopulationDTO(Long.parseLong(roomId), roomName, activeCount, onlineCount, totalMessages,
-                noiseLevel, false);
+                noiseLevel, false, isProOnly(roomId));
     }
 
     // =======================

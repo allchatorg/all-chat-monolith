@@ -7,12 +7,15 @@ import com.mk3.chatapp.models.ChatRoom;
 import com.mk3.chatapp.models.identity.User;
 import com.mk3.chatapp.repositories.ChatRoomRepository;
 import com.mk3.chatapp.services.ChatRoomService;
+import com.mk3.chatapp.services.RoomParticipationService;
 import com.mk3.chatapp.services.RoomActivityService;
 import com.mk3.chatapp.utils.Constants;
 import com.mk3.chatapp.utils.Utils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,13 +30,23 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final RoomActivityService roomActivityService;
+    private final JdbcTemplate jdbcTemplate;
+    private final RoomParticipationService roomParticipationService;
 
     @Override
+    @Transactional
     public ChatRoom createChatRoom(CreateChatRoomRequestDTO request, User connectedUser) {
 
-        String normalizedRequestName = request.name().toLowerCase().trim().replaceAll("\\s+", " ");
+        String normalizedRequestName = request.name().toLowerCase(Locale.ROOT).trim().replaceAll("\\s+", " ");
 
-        chatRoomRepository.findByNameIgnoreCase(normalizedRequestName).ifPresent(existingChatRoom -> {
+        if (request.proOnly()) roomParticipationService.requirePro(connectedUser);
+        if (getAllSpecialChatRoomNames().stream().anyMatch(name -> name.equalsIgnoreCase(normalizedRequestName))) {
+            throw new ConflictException("This chat room name is reserved.");
+        }
+        // Serialize the normalized name/mode pair across application instances.
+        jdbcTemplate.query("select pg_advisory_xact_lock(hashtextextended(?, 0))",
+                rs -> { }, normalizedRequestName + ":" + request.proOnly());
+        chatRoomRepository.findByNameIgnoreCaseAndProOnly(normalizedRequestName, request.proOnly()).ifPresent(existingChatRoom -> {
             if (existingChatRoom.isArchived()) {
                 if (!connectedUser.getRole().isStaffMember()) {
                     throw new ConflictException(
@@ -51,6 +64,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
 
         var chatRoom = ChatRoom.builder()
                 .name(titleCase)
+                .proOnly(request.proOnly())
                 .build();
 
         chatRoomRepository.save(chatRoom);
@@ -64,7 +78,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     public ChatRoom findByName(String chatRoomName) {
-        return chatRoomRepository.findByName((chatRoomName)).orElseThrow(
+        return chatRoomRepository.findByNameAndProOnlyFalse((chatRoomName)).orElseThrow(
                 () -> new RuntimeException("Chat room not found with name: " + chatRoomName)
         );
     }
@@ -146,7 +160,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     }
 
     private ChatRoom createDefaultPublicChatRoom(String roomName) {
-        var chatRoom = chatRoomRepository.findByNameIgnoreCase(roomName)
+        var chatRoom = chatRoomRepository.findByNameIgnoreCaseAndProOnly(roomName, false)
                 .map(existingChatRoom -> {
                     if (!existingChatRoom.getName().equals(roomName)) {
                         existingChatRoom.setName(roomName);
@@ -159,37 +173,37 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                         .name(roomName)
                         .build()));
 
-        roomActivityService.storeRoomMetadata(chatRoom.getId().toString(), chatRoom.getName());
+        roomActivityService.storeRoomMetadata(chatRoom.getId().toString(), chatRoom.getName(), chatRoom.isProOnly());
         return chatRoom;
     }
 
     @Override
     public void createStaffChatRooms() {
-        if (!chatRoomRepository.existsChatRoomByNameIgnoreCase(Constants.SUPER_ADMINS_CHATROOM_NAME)) {
+        if (!chatRoomRepository.existsChatRoomByNameIgnoreCaseAndProOnlyFalse(Constants.SUPER_ADMINS_CHATROOM_NAME)) {
             var superAdminRoom = ChatRoom.builder()
                     .name(Constants.SUPER_ADMINS_CHATROOM_NAME)
                     .requiredAccessLevel(Role.SUPER_ADMIN)
                     .build();
             chatRoomRepository.save(superAdminRoom);
-            roomActivityService.storeRoomMetadata(superAdminRoom.getId().toString(), superAdminRoom.getName());
+            roomActivityService.storeRoomMetadata(superAdminRoom.getId().toString(), superAdminRoom.getName(), superAdminRoom.isProOnly());
         }
 
-        if (!chatRoomRepository.existsChatRoomByNameIgnoreCase(Constants.ADMINS_CHATROOM_NAME)) {
+        if (!chatRoomRepository.existsChatRoomByNameIgnoreCaseAndProOnlyFalse(Constants.ADMINS_CHATROOM_NAME)) {
             var adminRoom = ChatRoom.builder()
                     .name(Constants.ADMINS_CHATROOM_NAME)
                     .requiredAccessLevel(Role.ADMIN)
                     .build();
             chatRoomRepository.save(adminRoom);
-            roomActivityService.storeRoomMetadata(adminRoom.getId().toString(), adminRoom.getName());
+            roomActivityService.storeRoomMetadata(adminRoom.getId().toString(), adminRoom.getName(), adminRoom.isProOnly());
         }
 
-        if (!chatRoomRepository.existsChatRoomByNameIgnoreCase(Constants.MODERATORS_CHATROOM_NAME)) {
+        if (!chatRoomRepository.existsChatRoomByNameIgnoreCaseAndProOnlyFalse(Constants.MODERATORS_CHATROOM_NAME)) {
             var moderatorRoom = ChatRoom.builder()
                     .name(Constants.MODERATORS_CHATROOM_NAME)
                     .requiredAccessLevel(Role.MODERATOR)
                     .build();
             chatRoomRepository.save(moderatorRoom);
-            roomActivityService.storeRoomMetadata(moderatorRoom.getId().toString(), moderatorRoom.getName());
+            roomActivityService.storeRoomMetadata(moderatorRoom.getId().toString(), moderatorRoom.getName(), moderatorRoom.isProOnly());
         }
     }
 
@@ -197,7 +211,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     public List<ChatRoom> getRoleAccessibleUserChatRooms(Role role) {
         return getAccessibleSecureUserChatRoomNames(role)
                 .stream()
-                .map(chatRoomName -> chatRoomRepository.findByName(chatRoomName)
+                .map(chatRoomName -> chatRoomRepository.findByNameAndProOnlyFalse(chatRoomName)
                         .orElseThrow(() -> new RuntimeException("Chat room not found with name: " + chatRoomName))
                 )
                 .toList();

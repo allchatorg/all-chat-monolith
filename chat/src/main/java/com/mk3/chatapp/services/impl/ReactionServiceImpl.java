@@ -16,6 +16,7 @@ import com.mk3.chatapp.repositories.MessageRepository;
 import com.mk3.chatapp.repositories.ReactionRepository;
 import com.mk3.chatapp.repositories.UserChatRoomRepository;
 import com.mk3.chatapp.services.ChatRoomService;
+import com.mk3.chatapp.services.RoomParticipationService;
 import com.mk3.chatapp.services.PrivateChatService;
 import com.mk3.chatapp.services.ProReactionService;
 import com.mk3.chatapp.services.ReactionService;
@@ -45,6 +46,7 @@ public class ReactionServiceImpl implements ReactionService {
     private final MessageRepository messageRepository;
     private final ProReactionService proReactionService;
     private final ChatRoomService chatRoomService;
+    private final RoomParticipationService roomParticipationService;
     private final PrivateChatService privateChatService;
     private final SecurityService securityService;
     private final RoomActivityService roomActivityService;
@@ -166,6 +168,7 @@ public class ReactionServiceImpl implements ReactionService {
         Message message = messageRepository.findByIdForReactionUpdate(messageId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Message not found"));
         assertMessageAccess(message, user);
+        roomParticipationService.requireParticipation(message.getChatRoom(), user);
         chatRoomService.validateRoomIsNotArchived(message.getChatRoom(), "react to messages");
         return message;
     }

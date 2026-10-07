@@ -82,6 +82,12 @@ public class TypingService {
             if (previous != null && previous.expiresAt() - LEASE_MS > System.currentTimeMillis() - REFRESH_MS) return;
         }
 
+        if (!accessService.canParticipate(userId, roomId)) {
+            synchronized (this) {
+                if (watches.get(sessionId) == watch) stopSession(sessionId);
+            }
+            return; // Readers keep their subscription but cannot publish typing activity.
+        }
         String username = username(userId, roomId, watch.ipAddress());
         synchronized (this) {
             if (watches.get(sessionId) != watch || revision != accessRevision) return;

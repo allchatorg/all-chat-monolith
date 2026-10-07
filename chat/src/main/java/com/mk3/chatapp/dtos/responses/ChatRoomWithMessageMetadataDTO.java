@@ -12,6 +12,7 @@ public record ChatRoomWithMessageMetadataDTO(
         boolean hasNext,
         Long firstMessageId,
         Long lastMessageId,
-        Long lastReadMessage
+        Long lastReadMessage,
+        boolean proOnly
 ) {
 }

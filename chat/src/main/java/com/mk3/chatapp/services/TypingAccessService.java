@@ -24,6 +24,13 @@ public class TypingAccessService {
     private final IpService ipService;
     private final MessagingAvailabilityService messagingAvailabilityService;
 
+    @Transactional(readOnly = true)
+    public boolean canParticipate(Long userId, Long roomId) {
+        var room = chatRoomRepository.findById(roomId).orElse(null);
+        var user = userRepository.findById(userId).orElse(null);
+        return room != null && user != null && (!room.isProOnly() || user.isProActive());
+    }
+
     // Also used after commit: a fresh read must see the new access rules, not an old managed entity.
     @Transactional(readOnly = true, propagation = Propagation.REQUIRES_NEW)
     public String authorizedUsername(Long userId, Long roomId, String ipAddress) {

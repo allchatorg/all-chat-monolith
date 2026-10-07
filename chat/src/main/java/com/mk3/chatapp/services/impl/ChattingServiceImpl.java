@@ -34,6 +34,7 @@ public class ChattingServiceImpl implements ChattingService {
 
     private final AttachmentService attachmentService;
     private final ChatRoomService chatRoomService;
+    private final RoomParticipationService roomParticipationService;
     private final MessagesService messagesService;
     private final UserChatRoomService userChatRoomService;
     private final UserService userService;
@@ -129,6 +130,10 @@ public class ChattingServiceImpl implements ChattingService {
 
     @Override
     public void deleteAttachment(Long attachmentId) {
+        var attachment = attachmentService.findById(attachmentId);
+        if (attachment.getMessage() != null) {
+            roomParticipationService.requireParticipation(attachment.getMessage().getChatRoom(), securityService.getCurrentUser());
+        }
         attachmentService.deleteAttachment(attachmentId);
     }
 
@@ -137,6 +142,7 @@ public class ChattingServiceImpl implements ChattingService {
         var requestor = securityService.getCurrentUser();
         var message = messagesService.findById(messageId, requestor.getRole());
 
+        roomParticipationService.requireParticipation(message.getChatRoom(), requestor);
         validateMessageDeletion(message, requestor);
 
         // Owners cannot remove a message while its promotion awaits review — they must

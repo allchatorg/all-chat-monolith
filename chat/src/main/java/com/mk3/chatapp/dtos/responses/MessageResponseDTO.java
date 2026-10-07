@@ -31,7 +31,8 @@ public record MessageResponseDTO(
         FontPreset senderUsernameFont,
         FontPreset senderMessageFont,
         long senderFontRevision,
-        String stickerId
+        String stickerId,
+        boolean chatRoomProOnly
 ) {
     /** Compatibility for existing message producers; absent badge metadata is hidden. */
     public MessageResponseDTO(Long id, String content, Long chatRoomId, String chatRoomName,
@@ -53,7 +54,7 @@ public record MessageResponseDTO(
         this(id, content, chatRoomId, chatRoomName, senderId, senderUsername, senderRole, senderCountryCode,
                 senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt, color, attachments,
                 reactions, replyTo, promotion, senderProBadgeVisible, senderProBadgeRevision,
-                FontPreset.DEFAULT, FontPreset.DEFAULT, 0L, null);
+                FontPreset.DEFAULT, FontPreset.DEFAULT, 0L, null, false);
     }
 
     public MessageResponseDTO(Long id, String content, Long chatRoomId, String chatRoomName,
@@ -66,7 +67,7 @@ public record MessageResponseDTO(
         this(id, content, chatRoomId, chatRoomName, senderId, senderUsername, senderRole, senderCountryCode,
                 senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt, color, attachments,
                 reactions, replyTo, promotion, senderProBadgeVisible, senderProBadgeRevision,
-                senderUsernameFont, senderMessageFont, senderFontRevision, null);
+                senderUsernameFont, senderMessageFont, senderFontRevision, null, false);
     }
 
     public MessageResponseDTO(Long id, String content, Long chatRoomId, String chatRoomName,
@@ -78,27 +79,27 @@ public record MessageResponseDTO(
         this(id, content, chatRoomId, chatRoomName, senderId, senderUsername, senderRole, senderCountryCode,
                 senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt, color, attachments,
                 reactions, replyTo, promotion, senderProBadgeVisible, senderProBadgeRevision,
-                FontPreset.DEFAULT, FontPreset.DEFAULT, 0L, stickerId);
+                FontPreset.DEFAULT, FontPreset.DEFAULT, 0L, stickerId, false);
     }
 
     public MessageResponseDTO withReplyTo(ReplyInfoDTO replyTo) {
         return new MessageResponseDTO(id, content, chatRoomId, chatRoomName, senderId, senderUsername,
                 senderRole, senderCountryCode, senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt,
                 color, attachments, reactions, replyTo, promotion, senderProBadgeVisible, senderProBadgeRevision,
-                senderUsernameFont, senderMessageFont, senderFontRevision, stickerId);
+                senderUsernameFont, senderMessageFont, senderFontRevision, stickerId, chatRoomProOnly);
     }
 
     public MessageResponseDTO withPromotion(PromotionInfoDTO promotion) {
         return new MessageResponseDTO(id, content, chatRoomId, chatRoomName, senderId, senderUsername,
                 senderRole, senderCountryCode, senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt,
                 color, attachments, reactions, replyTo, promotion, senderProBadgeVisible, senderProBadgeRevision,
-                senderUsernameFont, senderMessageFont, senderFontRevision, stickerId);
+                senderUsernameFont, senderMessageFont, senderFontRevision, stickerId, chatRoomProOnly);
     }
 
     public MessageResponseDTO withStickerId(String stickerId) {
         return new MessageResponseDTO(id, content, chatRoomId, chatRoomName, senderId, senderUsername,
                 senderRole, senderCountryCode, senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt,
                 color, attachments, reactions, replyTo, promotion, senderProBadgeVisible, senderProBadgeRevision,
-                senderUsernameFont, senderMessageFont, senderFontRevision, stickerId);
+                senderUsernameFont, senderMessageFont, senderFontRevision, stickerId, chatRoomProOnly);
     }
 }

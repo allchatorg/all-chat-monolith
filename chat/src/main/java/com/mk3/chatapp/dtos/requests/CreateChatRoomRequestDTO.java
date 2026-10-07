@@ -9,6 +9,7 @@ public record CreateChatRoomRequestDTO(
                 regexp = "^[A-Za-z0-9 ]+$",
                 message = "Name must contain only letters, numbers, and spaces"
         )
-        String name
+        String name,
+        boolean proOnly
 ) {
 }

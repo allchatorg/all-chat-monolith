@@ -289,7 +289,7 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
     }
 
     private ChatRoomDTO buildChatRoomStatusPayload(Long chatRoomId, String chatRoomName, boolean archived) {
-        return new ChatRoomDTO(chatRoomId, chatRoomName, List.of(), archived);
+        return new ChatRoomDTO(chatRoomId, chatRoomName, List.of(), archived, chatRoomService.findById(chatRoomId).isProOnly());
     }
 
     @Override
