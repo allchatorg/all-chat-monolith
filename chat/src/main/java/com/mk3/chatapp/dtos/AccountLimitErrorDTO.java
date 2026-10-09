@@ -8,5 +8,5 @@ import java.time.LocalDateTime;
 public record AccountLimitErrorDTO(int status, String error, String message, LocalDateTime timestamp,
                                    Limit limit) {
     public record Limit(AccountLimitExceededException.Code code, long maximum, long used,
-                        long requested, Long proMaximum) {}
+                        long requested, Long vipMaximum) {}
 }

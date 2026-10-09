@@ -7,6 +7,6 @@ public record ChatRoomDTO(
         String name,
         List<MessageResponseDTO> messages,
         boolean isArchived,
-        boolean proOnly
+        boolean vipOnly
 ) {
 }

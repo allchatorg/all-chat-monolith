@@ -33,7 +33,7 @@ public class AttachmentTypeServiceImpl implements AttachmentTypeService {
         if (file.getSize() > maxFileSizeBytes) {
             throw new AccountLimitExceededException(AccountLimitExceededException.Code.ATTACHMENT_BYTES,
                     "File size exceeds the maximum allowed size of " + maxFileSizeBytes + " bytes",
-                    maxFileSizeBytes, 0, file.getSize(), user.isProActive() ? null : AccountLimits.PRO_FILE_BYTES);
+                    maxFileSizeBytes, 0, file.getSize(), user.isVipActive() ? null : AccountLimits.VIP_FILE_BYTES);
         }
 
         return attachmentType;

@@ -8,7 +8,7 @@ public record RoomPromotionDto(
         Long id,
         Long chatRoomId,
         String chatRoomName,
-        boolean chatRoomProOnly,
+        boolean chatRoomVipOnly,
         RoomPromotionStatus status,
         Double amount,
         String currency,

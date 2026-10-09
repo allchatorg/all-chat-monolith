@@ -185,7 +185,7 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
         return new UserAdminViewDTO(user.getId(), user.getApplicationUsername(), user.getEmail(), user.isOver18(),
                 user.isClaimed(), user.isVerified(), user.isBanned(), user.getIdVerificationStatus(), user.getRole(),
                 user.getTotalUploadUsage(), usernameHistory, user.getCreatedAt(), lastSession.get().getCreatedAt(),
-                user.getCountryCode(), user.isProActive());
+                user.getCountryCode(), user.isVipActive());
     }
 
     @Override
@@ -289,7 +289,7 @@ public class AdminFacadeServiceImpl implements AdminFacadeService {
     }
 
     private ChatRoomDTO buildChatRoomStatusPayload(Long chatRoomId, String chatRoomName, boolean archived) {
-        return new ChatRoomDTO(chatRoomId, chatRoomName, List.of(), archived, chatRoomService.findById(chatRoomId).isProOnly());
+        return new ChatRoomDTO(chatRoomId, chatRoomName, List.of(), archived, chatRoomService.findById(chatRoomId).isVipOnly());
     }
 
     @Override

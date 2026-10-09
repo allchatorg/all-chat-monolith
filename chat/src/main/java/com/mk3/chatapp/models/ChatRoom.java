@@ -47,9 +47,9 @@ public class ChatRoom extends Base {
     @Builder.Default
     private ChatRoomType type = ChatRoomType.PUBLIC;
 
-    @Column(name = "pro_only", nullable = false, columnDefinition = "boolean default false")
+    @Column(name = "vip_only", nullable = false, columnDefinition = "boolean default false")
     @Builder.Default
-    private boolean proOnly = false;
+    private boolean vipOnly = false;
 
     @Column(name = "pair_key", unique = true)
     private String pairKey;

@@ -13,9 +13,9 @@ import java.util.Optional;
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
     boolean existsChatRoomByName(String name);
 
-    Optional<ChatRoom> findByNameAndProOnlyFalse(String name);
+    Optional<ChatRoom> findByNameAndVipOnlyFalse(String name);
 
-    Optional<ChatRoom> findByNameIgnoreCaseAndProOnly(String name, boolean proOnly);
+    Optional<ChatRoom> findByNameIgnoreCaseAndVipOnly(String name, boolean vipOnly);
 
     Optional<ChatRoom> findByPairKey(String pairKey);
 
@@ -91,5 +91,5 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
             """)
     List<ChatRoom> findJoinableChatRooms(@Param("roles") List<Role> roles, Pageable pageable);
 
-    boolean existsChatRoomByNameIgnoreCaseAndProOnlyFalse(String name);
+    boolean existsChatRoomByNameIgnoreCaseAndVipOnlyFalse(String name);
 }

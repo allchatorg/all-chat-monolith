@@ -18,7 +18,7 @@ import com.mk3.chatapp.repositories.UserChatRoomRepository;
 import com.mk3.chatapp.services.ChatRoomService;
 import com.mk3.chatapp.services.RoomParticipationService;
 import com.mk3.chatapp.services.PrivateChatService;
-import com.mk3.chatapp.services.ProReactionService;
+import com.mk3.chatapp.services.VipReactionService;
 import com.mk3.chatapp.services.ReactionService;
 import com.mk3.chatapp.services.RoomActivityService;
 import com.mk3.chatapp.services.SecurityService;
@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 public class ReactionServiceImpl implements ReactionService {
     private final ReactionRepository reactionRepository;
     private final MessageRepository messageRepository;
-    private final ProReactionService proReactionService;
+    private final VipReactionService vipReactionService;
     private final ChatRoomService chatRoomService;
     private final RoomParticipationService roomParticipationService;
     private final PrivateChatService privateChatService;
@@ -60,7 +60,7 @@ public class ReactionServiceImpl implements ReactionService {
     public void addReaction(User user, Long messageId, String emoji, String emojiId) {
         Message message = lockMessageForReaction(messageId, user);
         assertCanAddPrivateReaction(message.getChatRoom(), user);
-        proReactionService.validateForAdd(emoji, emojiId, user.getId());
+        vipReactionService.validateForAdd(emoji, emojiId, user.getId());
         Optional<Reaction> reactionOpt = reactionRepository.findByMessageIdAndEmoji(messageId, emoji);
         Reaction reaction;
 
@@ -89,7 +89,7 @@ public class ReactionServiceImpl implements ReactionService {
     @Override
     public void removeReaction(User user, Long messageId, String emoji, String emojiId) {
         lockMessageForReaction(messageId, user);
-        proReactionService.validateIdentity(emoji, emojiId);
+        vipReactionService.validateIdentity(emoji, emojiId);
         Optional<Reaction> reactionOpt = findByMessageIdAndEmoji(messageId, emoji);
 
         if (reactionOpt.isEmpty()) {
@@ -148,7 +148,7 @@ public class ReactionServiceImpl implements ReactionService {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Message not found"));
         assertMessageAccess(message, securityService.getCurrentUser());
-        proReactionService.validateIdentity(emoji, emoji);
+        vipReactionService.validateIdentity(emoji, emoji);
         return findByMessageIdAndEmoji(messageId, emoji)
                 .map(reaction -> {
                     // Limit only the response, never the managed collection: changing it
@@ -217,7 +217,7 @@ public class ReactionServiceImpl implements ReactionService {
                 responseType,
                 reaction.getEmoji(),
                 reaction.getEmojiId(),
-                new UserMinimalDTO(user.getId(), user.getApplicationUsername(), user.isProBadgeVisible(), user.getProBadgeRevision(),
+                new UserMinimalDTO(user.getId(), user.getApplicationUsername(), user.isVipBadgeVisible(), user.getVipBadgeRevision(),
                         user.getEffectiveUsernameFont(), user.getEffectiveMessageFont(), user.getFontRevision()));
     }
 

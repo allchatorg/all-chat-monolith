@@ -32,11 +32,11 @@ public record UserDTO(
         String timeZone,
         List<UserMinimalDTO> blockedUsers,
         @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
-        Boolean proActive,
+        Boolean vipActive,
         @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
-        Boolean showProBadge,
-        boolean proBadgeVisible,
-        long proBadgeRevision,
+        Boolean showVipBadge,
+        boolean vipBadgeVisible,
+        long vipBadgeRevision,
         FontPreset usernameFont,
         FontPreset messageFont,
         long fontRevision) {

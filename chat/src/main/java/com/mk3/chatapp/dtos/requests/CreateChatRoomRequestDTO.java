@@ -10,6 +10,6 @@ public record CreateChatRoomRequestDTO(
                 message = "Name must contain only letters, numbers, and spaces"
         )
         String name,
-        boolean proOnly
+        boolean vipOnly
 ) {
 }

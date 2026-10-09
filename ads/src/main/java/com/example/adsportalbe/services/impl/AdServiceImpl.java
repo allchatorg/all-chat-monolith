@@ -19,7 +19,7 @@ import com.example.adsportalbe.specifications.AdSpecification;
 import com.example.adsportalbe.utils.Utils;
 import com.mk3.chatapp.enums.NotificationType;
 import com.mk3.chatapp.models.identity.User;
-import com.mk3.chatapp.pro.ProStatisticsService;
+import com.mk3.chatapp.vip.VipStatisticsService;
 import com.mk3.chatapp.utils.MessageMarkers;
 import com.stripe.exception.StripeException;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +58,7 @@ public class AdServiceImpl implements AdService {
     private final PurchaseCommunicationService purchaseCommunicationService;
     private final AdCacheService adCacheService;
     private final AdMapper adMapper;
-    private final ProStatisticsService proStatistics;
+    private final VipStatisticsService vipStatistics;
 
     private static double refundableAmount(Ad ad) {
         if (ad.getReceipt().getAmountPaid() != null) {
@@ -574,13 +574,13 @@ public class AdServiceImpl implements AdService {
                     .revenue(adRevenueByMonth.getOrDefault(i, 0.0))
                     .promotedRevenue(promotedRevenueByMonth.getOrDefault(i, 0.0))
                     .roomPromotedRevenue(roomPromotionRevenueByMonth.getOrDefault(i, 0.0))
-                    .subscriptionRevenue(proStatistics.revenueBetween(monthStart, monthStart.plusMonths(1)))
+                    .subscriptionRevenue(vipStatistics.revenueBetween(monthStart, monthStart.plusMonths(1)))
                     .build());
         }
 
         return MonthlyRevenueResponseDto.builder()
                 .data(data)
-                .subscriptionSynchronization(proStatistics.synchronization())
+                .subscriptionSynchronization(vipStatistics.synchronization())
                 .build();
     }
 
@@ -620,13 +620,13 @@ public class AdServiceImpl implements AdService {
                     .revenue(adRevenueByDate.getOrDefault(date, 0.0))
                     .promotedRevenue(promotedRevenueByDate.getOrDefault(date, 0.0))
                     .roomPromotedRevenue(roomPromotionRevenueByDate.getOrDefault(date, 0.0))
-                    .subscriptionRevenue(proStatistics.revenueBetween(date, date.plusDays(1)))
+                    .subscriptionRevenue(vipStatistics.revenueBetween(date, date.plusDays(1)))
                     .build());
         }
 
         return WeeklyRevenueResponseDto.builder()
                 .data(data)
-                .subscriptionSynchronization(proStatistics.synchronization())
+                .subscriptionSynchronization(vipStatistics.synchronization())
                 .build();
     }
 }

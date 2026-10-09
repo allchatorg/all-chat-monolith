@@ -17,7 +17,7 @@ public record PromotedMessageDetailDto(
         List<AttachmentDTO> messageAttachments,
         Long chatRoomId,
         String chatRoomName,
-        boolean chatRoomProOnly,
+        boolean chatRoomVipOnly,
         PromotedMessageStatus status,
         CanceledBy canceledBy,
         String reason,

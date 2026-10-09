@@ -18,7 +18,7 @@ import com.mk3.chatapp.models.Tag;
 import com.mk3.chatapp.models.UserActionToken;
 import com.mk3.chatapp.models.UsernameHistory;
 import com.mk3.chatapp.models.identity.User;
-import com.mk3.chatapp.pro.ProBillingService;
+import com.mk3.chatapp.vip.VipBillingService;
 import com.mk3.chatapp.repositories.BanRepository;
 import com.mk3.chatapp.repositories.UserRepository;
 import com.mk3.chatapp.repositories.UsernameHistoryRepository;
@@ -67,8 +67,8 @@ public class UserServiceImpl implements UserService {
     private final SmsSenderService smsSenderService;
     private final PhoneNumberCleanupSchedulingService phoneNumberCleanupSchedulingService;
     private final GeolocationService geolocationService;
-    private final ProBillingService proBillingService;
-    private final com.mk3.chatapp.services.ProFontService proFontService;
+    private final VipBillingService vipBillingService;
+    private final com.mk3.chatapp.services.VipFontService vipFontService;
 
     @Override
     public void changePassword(ChangePasswordRequestDTO request, Principal connectedUser) {
@@ -492,10 +492,10 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteAccount(User user, DeleteAccountRequest deleteAccountRequest) {
         user = userRepository.findByIdForUpdate(user.getId()).orElseThrow();
-        proBillingService.cancelForAccountDeletion(user);
-        user.setProPaidThrough(null);
+        vipBillingService.cancelForAccountDeletion(user);
+        user.setVipPaidThrough(null);
         user.setDeleted(true);
-        proFontService.resetExpiredPreferences(user);
+        vipFontService.resetExpiredPreferences(user);
         user.setEmail(null);
         user.getUserChatRooms().clear();
         user.getBlurredContentTags().clear();

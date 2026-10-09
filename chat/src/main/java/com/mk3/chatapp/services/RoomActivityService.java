@@ -21,7 +21,7 @@ public interface RoomActivityService {
 
     RoomPopulationDTO userBecomesInactiveInRoom(String roomId, String userId);
 
-    void storeRoomMetadata(String roomId, String roomName, boolean proOnly);
+    void storeRoomMetadata(String roomId, String roomName, boolean vipOnly);
 
     void addMessage(String roomId);
 

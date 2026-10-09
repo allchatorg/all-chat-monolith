@@ -21,5 +21,5 @@ public record UserAdminViewDTO(
                 Instant createdAt,
                 Instant lastLoginAt,
                 String countryCode,
-                boolean proActive) {
+                boolean vipActive) {
 }

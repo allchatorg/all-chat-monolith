@@ -39,24 +39,24 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
     // Existing customers retain payment maintenance during an account restriction.
     // Purchase/checkout and plan changes are deliberately absent.
     private static final Map<String, Set<String>> BILLING_MAINTENANCE_ENDPOINTS = Map.ofEntries(
-            Map.entry("/api/v1/pro/payment-methods", Set.of("GET")),
-            Map.entry("/api/v1/pro/payment-methods/setup-intent", Set.of("POST")),
-            Map.entry("/api/v1/pro/payment-methods/setup-complete", Set.of("POST")),
-            Map.entry("/api/v1/pro/payment-methods/*/default", Set.of("POST")),
-            Map.entry("/api/v1/pro/payment-methods/*", Set.of("DELETE")),
-            Map.entry("/api/v1/pro/invoices", Set.of("GET")),
-            Map.entry("/api/v1/pro/invoices/*/pdf", Set.of("GET")),
-            Map.entry("/api/v1/pro/invoices/*/pay", Set.of("POST"))
+            Map.entry("/api/v1/vip/payment-methods", Set.of("GET")),
+            Map.entry("/api/v1/vip/payment-methods/setup-intent", Set.of("POST")),
+            Map.entry("/api/v1/vip/payment-methods/setup-complete", Set.of("POST")),
+            Map.entry("/api/v1/vip/payment-methods/*/default", Set.of("POST")),
+            Map.entry("/api/v1/vip/payment-methods/*", Set.of("DELETE")),
+            Map.entry("/api/v1/vip/invoices", Set.of("GET")),
+            Map.entry("/api/v1/vip/invoices/*/pdf", Set.of("GET")),
+            Map.entry("/api/v1/vip/invoices/*/pay", Set.of("POST"))
     );
     private static final Map<String, Set<String>> ENDPOINT_ALLOWED_METHODS = Map.ofEntries(
             Map.entry("/api/v1/auth/**", Set.of("GET", "POST", "PUT", "DELETE", "PATCH")),
             Map.entry("/health", Set.of("GET")),
             Map.entry("/ws/**", Set.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")),
             Map.entry("/api/v1/users/me", Set.of("GET")),
-            Map.entry("/api/v1/pro/subscription", Set.of("GET")),
-            Map.entry("/api/v1/pro/cancel", Set.of("POST")),
-            Map.entry("/api/v1/pro/portal", Set.of("POST")),
-            Map.entry("/api/v1/pro/scheduled-plan-change", Set.of("DELETE")),
+            Map.entry("/api/v1/vip/subscription", Set.of("GET")),
+            Map.entry("/api/v1/vip/cancel", Set.of("POST")),
+            Map.entry("/api/v1/vip/portal", Set.of("POST")),
+            Map.entry("/api/v1/vip/scheduled-plan-change", Set.of("DELETE")),
             Map.entry("/api/v1/users/send-email-verification", Set.of("POST")),
             Map.entry("/api/v1/users/verify", Set.of("PATCH")),
             Map.entry("/api/v1/users/send-phone-verification", Set.of("POST")),
@@ -78,10 +78,10 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
     private static final Map<String, Set<String>> BANNED_USER_ALLOWED_ENDPOINTS = Map.of(
             "/api/v1/ban-appeals/**", Set.of("GET", "POST"),
             "/api/v1/users/me", Set.of("GET"),
-            "/api/v1/pro/subscription", Set.of("GET"),
-            "/api/v1/pro/cancel", Set.of("POST"),
-            "/api/v1/pro/portal", Set.of("POST"),
-            "/api/v1/pro/scheduled-plan-change", Set.of("DELETE"),
+            "/api/v1/vip/subscription", Set.of("GET"),
+            "/api/v1/vip/cancel", Set.of("POST"),
+            "/api/v1/vip/portal", Set.of("POST"),
+            "/api/v1/vip/scheduled-plan-change", Set.of("DELETE"),
             "/api/v1/auth/ping", Set.of("GET"),
             "/api/v1/auth/logout", Set.of("POST"),
             "/api/v1/auth/login", Set.of("POST")
@@ -96,7 +96,7 @@ public class AccessRestrictionFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         // Authentication for this exact endpoint is the Stripe signature, never the caller's IP/session.
-        return "POST".equals(request.getMethod()) && "/api/v1/pro/webhook".equals(request.getRequestURI());
+        return "POST".equals(request.getMethod()) && "/api/v1/vip/webhook".equals(request.getRequestURI());
     }
 
     @Override

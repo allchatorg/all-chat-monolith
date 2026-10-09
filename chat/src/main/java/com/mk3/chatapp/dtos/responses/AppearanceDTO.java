@@ -1,5 +1,5 @@
 package com.mk3.chatapp.dtos.responses;
 
-public record AppearanceDTO(boolean showProBadge, boolean proActive, boolean proBadgeVisible,
-                            long proBadgeRevision) {
+public record AppearanceDTO(boolean showVipBadge, boolean vipActive, boolean vipBadgeVisible,
+                            long vipBadgeRevision) {
 }

@@ -12,8 +12,8 @@ public record UserChatRoomDTO(
         MessageResponseDTO lastReadMessage,
         MessageResponseDTO lastMessage
 ) {
-    @com.fasterxml.jackson.annotation.JsonProperty("proOnly")
-    public boolean proOnly() {
-        return roomPopulation != null && roomPopulation.proOnly();
+    @com.fasterxml.jackson.annotation.JsonProperty("vipOnly")
+    public boolean vipOnly() {
+        return roomPopulation != null && roomPopulation.vipOnly();
     }
 }

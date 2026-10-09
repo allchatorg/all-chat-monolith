@@ -54,7 +54,7 @@ public class MessagesServiceImpl implements MessagesService {
     private final RoomParticipationService roomParticipationService;
     private final UserChatRoomRepository userChatRoomRepository;
     private final MessagePromotionEnrichmentService messagePromotionEnrichmentService;
-    private final ProStickerService proStickerService;
+    private final VipStickerService vipStickerService;
 
     /**
      * Validates message content when saving a new message.
@@ -103,7 +103,7 @@ public class MessagesServiceImpl implements MessagesService {
             throw new AccountLimitExceededException(AccountLimitExceededException.Code.MESSAGE_CHARACTERS,
                     "Message content exceeds maximum length of " + maxLength + " characters",
                     maxLength, visibleLength, 0,
-                    maxLength < AccountLimits.PRO_MESSAGE_LENGTH ? (long) AccountLimits.PRO_MESSAGE_LENGTH : null);
+                    maxLength < AccountLimits.VIP_MESSAGE_LENGTH ? (long) AccountLimits.VIP_MESSAGE_LENGTH : null);
         }
     }
 
@@ -136,12 +136,12 @@ public class MessagesServiceImpl implements MessagesService {
                 messageResponseDTO.reactions(),
                 messageResponseDTO.replyTo(),
                 messageResponseDTO.promotion(),
-                messageResponseDTO.senderProBadgeVisible(),
-                messageResponseDTO.senderProBadgeRevision(),
+                messageResponseDTO.senderVipBadgeVisible(),
+                messageResponseDTO.senderVipBadgeRevision(),
                 messageResponseDTO.senderUsernameFont(),
                 messageResponseDTO.senderMessageFont(),
                 messageResponseDTO.senderFontRevision(),
-                messageResponseDTO.stickerId(), messageResponseDTO.chatRoomProOnly());
+                messageResponseDTO.stickerId(), messageResponseDTO.chatRoomVipOnly());
     }
 
     @Override
@@ -192,11 +192,11 @@ public class MessagesServiceImpl implements MessagesService {
                     && !messageRequestDTO.attachments().isEmpty())) {
                 throw new IllegalArgumentException("Sticker messages cannot include text or attachments");
             }
-            proStickerService.validateForSend(messageRequestDTO.stickerId(), user.getId());
+            vipStickerService.validateForSend(messageRequestDTO.stickerId(), user.getId());
         } else {
             validateMessageForSave(content, AccountLimits.messageLength(user), messageRequestDTO.attachments());
             if (content.contains(":allchat:")) {
-                proStickerService.validateInlineEmojis(content, null, user.getId());
+                vipStickerService.validateInlineEmojis(content, null, user.getId());
             }
         }
 
@@ -517,7 +517,7 @@ public class MessagesServiceImpl implements MessagesService {
         String updatedContent = content == null ? "" : content;
         validateMessageForEdit(updatedContent, AccountLimits.messageLength(user), message.getAttachments().size());
         if (updatedContent.contains(":allchat:")) {
-            proStickerService.validateInlineEmojis(updatedContent, message.getContent(), user.getId());
+            vipStickerService.validateInlineEmojis(updatedContent, message.getContent(), user.getId());
         }
 
         messageEditHistoryService.save(message.getContent(), message, new ArrayList<>(message.getAttachments()), user);

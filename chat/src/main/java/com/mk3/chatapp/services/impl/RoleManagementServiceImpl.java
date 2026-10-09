@@ -30,7 +30,7 @@ public class RoleManagementServiceImpl implements RoleManagementService {
     private final NotificationService notificationService;
     private final UserRepository userRepository;
     private final EntityManager entityManager;
-    private final ProBadgeService proBadgeService;
+    private final VipBadgeService vipBadgeService;
 
     @Transactional
     @Override
@@ -47,7 +47,7 @@ public class RoleManagementServiceImpl implements RoleManagementService {
         user.setRole(role);
         userService.save(user);
         if (previousRole.isStaffMember() != role.isStaffMember()) {
-            proBadgeService.refreshRoleEntitlement(user);
+            vipBadgeService.refreshRoleEntitlement(user);
         }
 
         // Broadcast role update notification to target user

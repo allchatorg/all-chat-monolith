@@ -45,7 +45,7 @@ spring:
     password: ${SPRING_RABBITMQ_PASSWORD:guest}
   servlet:
     multipart:
-      # allchat Pro files can be 100 MiB; allow multipart framing overhead.
+      # allchat VIP files can be 100 MiB; allow multipart framing overhead.
       # Per-account/type limits and the ads limit are enforced by their services.
       max-file-size: 100MB
       max-request-size: 110MB
@@ -60,10 +60,10 @@ spring:
       initialize-schema: never
 
 app:
-  pro:
-    enabled: ${ALLCHAT_PRO_ENABLED:false}
-    live-enabled: ${ALLCHAT_PRO_LIVE_ENABLED:false}
-    yearly-billing-enabled: ${ALLCHAT_PRO_YEARLY_BILLING_ENABLED:false}
+  vip:
+    enabled: ${ALLCHAT_VIP_ENABLED:false}
+    live-enabled: ${ALLCHAT_VIP_LIVE_ENABLED:false}
+    yearly-billing-enabled: ${ALLCHAT_VIP_YEARLY_BILLING_ENABLED:false}
   FRONT_END:
     URL: ${APP_FRONTEND_URL}
   admin:
@@ -86,12 +86,12 @@ community-night:
 
 stripe:
   api-key: ${STRIPE_API_KEY}
-  pro:
-    monthly-price-id: ${STRIPE_PRO_MONTHLY_PRICE_ID:}
-    yearly-price-id: ${STRIPE_PRO_YEARLY_PRICE_ID:}
-    billing-portal-configuration-id: ${STRIPE_PRO_BILLING_PORTAL_CONFIGURATION_ID:}
-    switch-portal-configuration-id: ${STRIPE_PRO_SWITCH_PORTAL_CONFIGURATION_ID:}
-    webhook-secret: ${STRIPE_PRO_WEBHOOK_SECRET:}
+  vip:
+    monthly-price-id: ${STRIPE_VIP_MONTHLY_PRICE_ID:}
+    yearly-price-id: ${STRIPE_VIP_YEARLY_PRICE_ID:}
+    billing-portal-configuration-id: ${STRIPE_VIP_BILLING_PORTAL_CONFIGURATION_ID:}
+    switch-portal-configuration-id: ${STRIPE_VIP_SWITCH_PORTAL_CONFIGURATION_ID:}
+    webhook-secret: ${STRIPE_VIP_WEBHOOK_SECRET:}
   # --- chat module: Stripe Identity (ID/age verification) ---
   secret-key: ${STRIPE_SECRET_KEY}
   identity:

@@ -3,8 +3,8 @@ package com.mk3.chatapp.services;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mk3.chatapp.models.identity.User;
-import com.mk3.chatapp.pro.ProConfiguration;
-import com.mk3.chatapp.repositories.ProSubscriptionRepository;
+import com.mk3.chatapp.vip.VipConfiguration;
+import com.mk3.chatapp.repositories.VipSubscriptionRepository;
 import com.mk3.chatapp.repositories.UserRepository;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Customer;
@@ -35,15 +35,15 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
-/** Customer-bound card setup and removal rules shared by Ads and Pro. */
+/** Customer-bound card setup and removal rules shared by Ads and VIP. */
 @Service
 @RequiredArgsConstructor
 public class BillingPaymentMethodService {
     private static final Set<String> ENDED = Set.of("canceled", "incomplete_expired");
-    private final ProConfiguration config;
+    private final VipConfiguration config;
     private final StripeCustomerService customers;
     private final UserRepository users;
-    private final ProSubscriptionRepository proSubscriptions;
+    private final VipSubscriptionRepository vipSubscriptions;
     private final EntityManager entityManager;
     private final ObjectMapper objectMapper;
 
@@ -154,16 +154,16 @@ public class BillingPaymentMethodService {
     }
 
     private void setDefaultLocked(User user, PaymentMethod card) throws StripeException {
-        String subscriptionId = proSubscriptions.findById(user.getId())
-                .map(pro -> pro.getStripeSubscriptionId()).orElse(null);
+        String subscriptionId = vipSubscriptions.findById(user.getId())
+                .map(vip -> vip.getStripeSubscriptionId()).orElse(null);
         if (subscriptionId == null) throw conflict("There is no renewing VIP subscription to update.");
         Subscription subscription = Subscription.retrieve(subscriptionId, config.requestOptions());
-        boolean isPro = subscription.getMetadata() != null
-                && "pro".equals(subscription.getMetadata().get("allchat_feature"));
-        if (!isPro && subscription.getItems() != null) isPro = subscription.getItems().getData().stream()
+        boolean isVip = subscription.getMetadata() != null
+                && "vip".equals(subscription.getMetadata().get("allchat_feature"));
+        if (!isVip && subscription.getItems() != null) isVip = subscription.getItems().getData().stream()
                 .anyMatch(item -> item.getPrice() != null && config.intervalForPrice(item.getPrice().getId()) != null);
         if (!Objects.equals(user.getStripeCustomerId(), subscription.getCustomer())
-                || !isPro) {
+                || !isVip) {
             throw forbidden("This subscription does not belong to your account.");
         }
         if (ENDED.contains(subscription.getStatus())) throw conflict("This subscription has ended.");
@@ -240,8 +240,8 @@ public class BillingPaymentMethodService {
         Customer customer = Customer.retrieve(customerId, config.requestOptions());
         String customerDefault = customer.getInvoiceSettings() == null ? null
                 : customer.getInvoiceSettings().getDefaultPaymentMethod();
-        String proId = proSubscriptions.findById(user.getId()).map(pro -> pro.getStripeSubscriptionId()).orElse(null);
-        String proDefault = null;
+        String vipId = vipSubscriptions.findById(user.getId()).map(vip -> vip.getStripeSubscriptionId()).orElse(null);
+        String vipDefault = null;
         boolean hasSubscriptionWithoutDefault = false;
         Map<String, String> protectedCards = new HashMap<>();
         for (Subscription subscription : Subscription.list(SubscriptionListParams.builder()
@@ -253,7 +253,7 @@ public class BillingPaymentMethodService {
             if (renewalCard != null) protectedCards.put(renewalCard,
                     "Choose another renewal card before removing this card.");
             else hasSubscriptionWithoutDefault = true;
-            if (subscription.getId().equals(proId)) proDefault = renewalCard;
+            if (subscription.getId().equals(vipId)) vipDefault = renewalCard;
         }
         for (Invoice invoice : Invoice.list(InvoiceListParams.builder().setCustomer(customerId)
                 .setStatus(InvoiceListParams.Status.OPEN).setLimit(100L).addExpand("data.payment_intent").build(),
@@ -281,7 +281,7 @@ public class BillingPaymentMethodService {
                 }
             }
         }
-        final String defaultCard = proDefault;
+        final String defaultCard = vipDefault;
         final boolean needsLastCard = hasSubscriptionWithoutDefault && cards.size() == 1;
         return cards.stream().filter(card -> card.getCard() != null).map(card -> {
             String reason = protectedCards.get(card.getId());

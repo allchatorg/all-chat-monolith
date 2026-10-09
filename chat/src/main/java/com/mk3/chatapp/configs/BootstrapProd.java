@@ -66,7 +66,7 @@ public class BootstrapProd implements CommandLineRunner {
             if (room.getType() == ChatRoomType.PRIVATE) {
                 return;
             }
-            roomActivityService.storeRoomMetadata(room.getId().toString(), room.getName(), room.isProOnly());
+            roomActivityService.storeRoomMetadata(room.getId().toString(), room.getName(), room.isVipOnly());
             if (room.isArchived()) {
                 roomActivityService.markRoomAsArchived(room.getId().toString());
             }

@@ -15,8 +15,8 @@ public interface UserMapper {
     @Mapping(target = "banned", source = "banned")
     @Mapping(target = "idVerificationUnderAge", expression =
             "java(user.getIdVerificationStatus() == com.mk3.chatapp.enums.IdVerificationStatus.REJECTED && user.getVerifiedDateOfBirth() != null)")
-    @Mapping(target = "proActive", ignore = true)
-    @Mapping(target = "showProBadge", ignore = true)
+    @Mapping(target = "vipActive", ignore = true)
+    @Mapping(target = "showVipBadge", ignore = true)
     @Mapping(target = "usernameFont", source = "effectiveUsernameFont")
     @Mapping(target = "messageFont", source = "effectiveMessageFont")
     UserDTO toDto(User user);
@@ -24,14 +24,14 @@ public interface UserMapper {
     /** Account-owner responses include membership and the public badge preference. */
     @Named("owner")
     @InheritConfiguration(name = "toDto")
-    @Mapping(target = "proActive", expression = "java(user.isProActive())")
-    @Mapping(target = "showProBadge", expression = "java(user.isShowProBadge())")
+    @Mapping(target = "vipActive", expression = "java(user.isVipActive())")
+    @Mapping(target = "showVipBadge", expression = "java(user.isShowVipBadge())")
     UserDTO toOwnerDto(User user);
 
     /** Restricted staff detail responses disclose membership, never billing details. */
     @Named("moderation")
     @InheritConfiguration(name = "toDto")
-    @Mapping(target = "proActive", expression = "java(user.isProActive())")
+    @Mapping(target = "vipActive", expression = "java(user.isVipActive())")
     UserDTO toModerationDto(User user);
 
     @Mapping(target = "username", expression = "java(user.getApplicationUsername())")
