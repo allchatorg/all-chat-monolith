@@ -26,13 +26,13 @@ public record MessageResponseDTO(
         List<ReactionSummaryDTO> reactions,
         ReplyInfoDTO replyTo,
         PromotionInfoDTO promotion,
-        boolean senderProBadgeVisible,
-        long senderProBadgeRevision,
+        boolean senderVipBadgeVisible,
+        long senderVipBadgeRevision,
         FontPreset senderUsernameFont,
         FontPreset senderMessageFont,
         long senderFontRevision,
         String stickerId,
-        boolean chatRoomProOnly
+        boolean chatRoomVipOnly
 ) {
     /** Compatibility for existing message producers; absent badge metadata is hidden. */
     public MessageResponseDTO(Long id, String content, Long chatRoomId, String chatRoomName,
@@ -50,10 +50,10 @@ public record MessageResponseDTO(
                               IdVerificationStatus senderIdVerificationStatus, boolean bannedUser, boolean deleted,
                               String createdAt, String editedAt, String color, List<AttachmentDTO> attachments,
                               List<ReactionSummaryDTO> reactions, ReplyInfoDTO replyTo, PromotionInfoDTO promotion,
-                              boolean senderProBadgeVisible, long senderProBadgeRevision) {
+                              boolean senderVipBadgeVisible, long senderVipBadgeRevision) {
         this(id, content, chatRoomId, chatRoomName, senderId, senderUsername, senderRole, senderCountryCode,
                 senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt, color, attachments,
-                reactions, replyTo, promotion, senderProBadgeVisible, senderProBadgeRevision,
+                reactions, replyTo, promotion, senderVipBadgeVisible, senderVipBadgeRevision,
                 FontPreset.DEFAULT, FontPreset.DEFAULT, 0L, null, false);
     }
 
@@ -62,11 +62,11 @@ public record MessageResponseDTO(
                               IdVerificationStatus senderIdVerificationStatus, boolean bannedUser, boolean deleted,
                               String createdAt, String editedAt, String color, List<AttachmentDTO> attachments,
                               List<ReactionSummaryDTO> reactions, ReplyInfoDTO replyTo, PromotionInfoDTO promotion,
-                              boolean senderProBadgeVisible, long senderProBadgeRevision,
+                              boolean senderVipBadgeVisible, long senderVipBadgeRevision,
                               FontPreset senderUsernameFont, FontPreset senderMessageFont, long senderFontRevision) {
         this(id, content, chatRoomId, chatRoomName, senderId, senderUsername, senderRole, senderCountryCode,
                 senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt, color, attachments,
-                reactions, replyTo, promotion, senderProBadgeVisible, senderProBadgeRevision,
+                reactions, replyTo, promotion, senderVipBadgeVisible, senderVipBadgeRevision,
                 senderUsernameFont, senderMessageFont, senderFontRevision, null, false);
     }
 
@@ -75,31 +75,31 @@ public record MessageResponseDTO(
                               IdVerificationStatus senderIdVerificationStatus, boolean bannedUser, boolean deleted,
                               String createdAt, String editedAt, String color, List<AttachmentDTO> attachments,
                               List<ReactionSummaryDTO> reactions, ReplyInfoDTO replyTo, PromotionInfoDTO promotion,
-                              boolean senderProBadgeVisible, long senderProBadgeRevision, String stickerId) {
+                              boolean senderVipBadgeVisible, long senderVipBadgeRevision, String stickerId) {
         this(id, content, chatRoomId, chatRoomName, senderId, senderUsername, senderRole, senderCountryCode,
                 senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt, color, attachments,
-                reactions, replyTo, promotion, senderProBadgeVisible, senderProBadgeRevision,
+                reactions, replyTo, promotion, senderVipBadgeVisible, senderVipBadgeRevision,
                 FontPreset.DEFAULT, FontPreset.DEFAULT, 0L, stickerId, false);
     }
 
     public MessageResponseDTO withReplyTo(ReplyInfoDTO replyTo) {
         return new MessageResponseDTO(id, content, chatRoomId, chatRoomName, senderId, senderUsername,
                 senderRole, senderCountryCode, senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt,
-                color, attachments, reactions, replyTo, promotion, senderProBadgeVisible, senderProBadgeRevision,
-                senderUsernameFont, senderMessageFont, senderFontRevision, stickerId, chatRoomProOnly);
+                color, attachments, reactions, replyTo, promotion, senderVipBadgeVisible, senderVipBadgeRevision,
+                senderUsernameFont, senderMessageFont, senderFontRevision, stickerId, chatRoomVipOnly);
     }
 
     public MessageResponseDTO withPromotion(PromotionInfoDTO promotion) {
         return new MessageResponseDTO(id, content, chatRoomId, chatRoomName, senderId, senderUsername,
                 senderRole, senderCountryCode, senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt,
-                color, attachments, reactions, replyTo, promotion, senderProBadgeVisible, senderProBadgeRevision,
-                senderUsernameFont, senderMessageFont, senderFontRevision, stickerId, chatRoomProOnly);
+                color, attachments, reactions, replyTo, promotion, senderVipBadgeVisible, senderVipBadgeRevision,
+                senderUsernameFont, senderMessageFont, senderFontRevision, stickerId, chatRoomVipOnly);
     }
 
     public MessageResponseDTO withStickerId(String stickerId) {
         return new MessageResponseDTO(id, content, chatRoomId, chatRoomName, senderId, senderUsername,
                 senderRole, senderCountryCode, senderIdVerificationStatus, bannedUser, deleted, createdAt, editedAt,
-                color, attachments, reactions, replyTo, promotion, senderProBadgeVisible, senderProBadgeRevision,
-                senderUsernameFont, senderMessageFont, senderFontRevision, stickerId, chatRoomProOnly);
+                color, attachments, reactions, replyTo, promotion, senderVipBadgeVisible, senderVipBadgeRevision,
+                senderUsernameFont, senderMessageFont, senderFontRevision, stickerId, chatRoomVipOnly);
     }
 }

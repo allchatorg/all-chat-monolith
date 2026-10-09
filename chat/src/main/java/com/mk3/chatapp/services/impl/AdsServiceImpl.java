@@ -32,9 +32,14 @@ public class AdsServiceImpl implements AdsService {
     @Override
     public AdvertResponseDTO serveAd(Principal user, String ipAddress) {
         try {
-            Long userId = userService.getPrincipal(user).getId();
+            var current = userService.getPrincipal(user);
 
-            ServedAdDto servedAdDto = adServingPort.serveAd(userId, ipAddress);
+            // VIP is ad-free; skip serving so VIP traffic never consumes paid views.
+            if (current.isVipActive()) {
+                return null;
+            }
+
+            ServedAdDto servedAdDto = adServingPort.serveAd(current.getId(), ipAddress);
 
             if (servedAdDto == null) {
                 return null;

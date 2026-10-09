@@ -13,15 +13,15 @@ public class AccountLimitExceededException extends IllegalArgumentException {
     private final long maximum;
     private final long used;
     private final long requested;
-    private final Long proMaximum;
+    private final Long vipMaximum;
 
     public AccountLimitExceededException(Code code, String message, long maximum, long used,
-                                         long requested, Long proMaximum) {
+                                         long requested, Long vipMaximum) {
         super(message);
         this.code = code;
         this.maximum = maximum;
         this.used = used;
         this.requested = requested;
-        this.proMaximum = proMaximum;
+        this.vipMaximum = vipMaximum;
     }
 }

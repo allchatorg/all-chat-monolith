@@ -11,8 +11,8 @@ public record ReplyInfoDTO(
         boolean deleted,
         boolean hasAttachment,
         String attachmentName,
-        boolean senderProBadgeVisible,
-        long senderProBadgeRevision,
+        boolean senderVipBadgeVisible,
+        long senderVipBadgeRevision,
         FontPreset senderUsernameFont,
         FontPreset senderMessageFont,
         long senderFontRevision,
@@ -20,8 +20,8 @@ public record ReplyInfoDTO(
 ) {
     public ReplyInfoDTO(Long id, Long senderId, String senderUsername, String color, String content,
                         boolean deleted, boolean hasAttachment, String attachmentName,
-                        boolean senderProBadgeVisible, long senderProBadgeRevision) {
+                        boolean senderVipBadgeVisible, long senderVipBadgeRevision) {
         this(id, senderId, senderUsername, color, content, deleted, hasAttachment, attachmentName,
-                senderProBadgeVisible, senderProBadgeRevision, FontPreset.DEFAULT, FontPreset.DEFAULT, 0L, null);
+                senderVipBadgeVisible, senderVipBadgeRevision, FontPreset.DEFAULT, FontPreset.DEFAULT, 0L, null);
     }
 }

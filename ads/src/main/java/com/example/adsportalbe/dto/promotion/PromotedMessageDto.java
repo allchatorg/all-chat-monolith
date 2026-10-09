@@ -10,7 +10,7 @@ public record PromotedMessageDto(
         String messageContent,
         Long chatRoomId,
         String chatRoomName,
-        boolean chatRoomProOnly,
+        boolean chatRoomVipOnly,
         PromotedMessageStatus status,
         Double amount,
         String currency,

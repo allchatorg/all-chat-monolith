@@ -13,6 +13,6 @@ public record ChatRoomWithMessageMetadataDTO(
         Long firstMessageId,
         Long lastMessageId,
         Long lastReadMessage,
-        boolean proOnly
+        boolean vipOnly
 ) {
 }

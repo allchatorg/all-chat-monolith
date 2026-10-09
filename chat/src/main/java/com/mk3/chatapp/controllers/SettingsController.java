@@ -6,8 +6,8 @@ import com.mk3.chatapp.dtos.requests.UpdateTimeFormatSettingsRequest;
 import com.mk3.chatapp.dtos.requests.UpdateTimeZoneRequest;
 import com.mk3.chatapp.enums.TimeFormat;
 import com.mk3.chatapp.services.SettingsService;
-import com.mk3.chatapp.services.ProBadgeService;
-import com.mk3.chatapp.services.ProFontService;
+import com.mk3.chatapp.services.VipBadgeService;
+import com.mk3.chatapp.services.VipFontService;
 import com.mk3.chatapp.dtos.requests.UpdateFontSettingsRequest;
 import com.mk3.chatapp.dtos.responses.FontSettingsDTO;
 import com.mk3.chatapp.services.SecurityService;
@@ -29,18 +29,18 @@ import java.util.List;
 )
 public class SettingsController {
     private final SettingsService settingsService;
-    private final ProBadgeService proBadgeService;
+    private final VipBadgeService vipBadgeService;
     private final SecurityService securityService;
-    private final ProFontService proFontService;
+    private final VipFontService vipFontService;
 
     @GetMapping("/fonts")
     public FontSettingsDTO getFonts() {
-        return proFontService.getSettings(currentUserId());
+        return vipFontService.getSettings(currentUserId());
     }
 
     @PatchMapping("/fonts")
     public FontSettingsDTO updateFonts(@Valid @RequestBody UpdateFontSettingsRequest request) {
-        return proFontService.updateSettings(currentUserId(), request);
+        return vipFontService.updateSettings(currentUserId(), request);
     }
 
     private Long currentUserId() {
@@ -57,7 +57,7 @@ public class SettingsController {
         if (user == null) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.UNAUTHORIZED);
         }
-        return proBadgeService.updatePreference(user.getId(), request.showProBadge());
+        return vipBadgeService.updatePreference(user.getId(), request.showVipBadge());
     }
 
     @GetMapping("/tags")

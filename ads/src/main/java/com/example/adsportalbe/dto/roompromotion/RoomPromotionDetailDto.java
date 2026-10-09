@@ -9,7 +9,7 @@ public record RoomPromotionDetailDto(
         Long id,
         Long chatRoomId,
         String chatRoomName,
-        boolean chatRoomProOnly,
+        boolean chatRoomVipOnly,
         boolean chatRoomArchived,
         RoomPromotionStatus status,
         CanceledBy canceledBy,

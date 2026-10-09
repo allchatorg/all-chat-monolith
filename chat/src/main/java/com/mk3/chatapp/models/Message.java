@@ -42,7 +42,7 @@ public class Message extends Base {
     // Chat text with formatting stripped and each inline emoji represented by
     // one placeholder, kept for LIKE search; null on rows
     // written before the column existed (search falls back to content).
-    @Column(name = "content_plain", length = AccountLimits.PRO_MESSAGE_LENGTH)
+    @Column(name = "content_plain", length = AccountLimits.VIP_MESSAGE_LENGTH)
     private String contentPlain;
 
     @PrePersist

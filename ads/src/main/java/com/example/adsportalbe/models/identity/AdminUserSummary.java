@@ -50,12 +50,12 @@ import java.time.Instant;
                 left join payment_receipts r on r.id = rp.receipt_id
                 union all
                 select p.user_id, 0, (p.paid_cents - p.refunded_cents) / 100.0
-                from pro_subscription_payment p
+                from vip_subscription_payment p
             ) purchases
             group by purchases.user_id
         ) spending on spending.user_id = u.id
         """)
-@Synchronize({"chat_user", "ads", "payment_receipts", "promoted_messages", "room_promotions", "pro_subscription_payment"})
+@Synchronize({"chat_user", "ads", "payment_receipts", "promoted_messages", "room_promotions", "vip_subscription_payment"})
 @Getter
 @NoArgsConstructor
 public class AdminUserSummary {

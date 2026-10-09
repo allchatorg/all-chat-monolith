@@ -17,13 +17,13 @@ public interface MessageMapper {
     @Mapping(target = "deleted", source = "message.deleted")
     @Mapping(target = "chatRoomId", source = "message.chatRoom.id")
     @Mapping(target = "chatRoomName", source = "message.chatRoom.name")
-    @Mapping(target = "chatRoomProOnly", source = "message.chatRoom.proOnly")
+    @Mapping(target = "chatRoomVipOnly", source = "message.chatRoom.vipOnly")
     @Mapping(target = "createdAt", source = "message.createdAt", qualifiedByName = "instantToString")
     @Mapping(target = "color", source = "message.sender.displayColor")
     @Mapping(target = "senderCountryCode", source = "message.sender.countryCode")
     @Mapping(target = "senderIdVerificationStatus", source = "message.sender.idVerificationStatus")
-    @Mapping(target = "senderProBadgeVisible", source = "message.sender.proBadgeVisible")
-    @Mapping(target = "senderProBadgeRevision", source = "message.sender.proBadgeRevision")
+    @Mapping(target = "senderVipBadgeVisible", source = "message.sender.vipBadgeVisible")
+    @Mapping(target = "senderVipBadgeRevision", source = "message.sender.vipBadgeRevision")
     @Mapping(target = "senderUsernameFont", source = "message.sender.effectiveUsernameFont")
     @Mapping(target = "senderMessageFont", source = "message.sender.effectiveMessageFont")
     @Mapping(target = "senderFontRevision", source = "message.sender.fontRevision")
@@ -67,8 +67,8 @@ public interface MessageMapper {
                 deleted || quarantined,
                 hasAttachment,
                 attachmentName,
-                parent.getSender().isProBadgeVisible(),
-                parent.getSender().getProBadgeRevision(),
+                parent.getSender().isVipBadgeVisible(),
+                parent.getSender().getVipBadgeRevision(),
                 parent.getSender().getEffectiveUsernameFont(),
                 parent.getSender().getEffectiveMessageFont(),
                 parent.getSender().getFontRevision(),

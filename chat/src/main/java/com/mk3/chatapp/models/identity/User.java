@@ -116,20 +116,20 @@ public class User extends Base implements UserDetails {
 
     /** Paid entitlement is independent of account roles and the public badge preference. */
     @JsonIgnore
-    @Column(name = "pro_paid_through", updatable = false)
-    private Instant proPaidThrough;
+    @Column(name = "vip_paid_through", updatable = false)
+    private Instant vipPaidThrough;
 
     @JsonIgnore
     @Builder.Default
-    @Column(name = "show_pro_badge", nullable = false, updatable = false)
-    private boolean showProBadge = true;
+    @Column(name = "show_vip_badge", nullable = false, updatable = false)
+    private boolean showVipBadge = true;
 
-    @Column(name = "pro_badge_revision", nullable = false, updatable = false)
-    private long proBadgeRevision;
+    @Column(name = "vip_badge_revision", nullable = false, updatable = false)
+    private long vipBadgeRevision;
 
     @JsonIgnore
-    @Column(name = "pro_badge_last_published_visible", nullable = false, updatable = false)
-    private boolean proBadgeLastPublishedVisible;
+    @Column(name = "vip_badge_last_published_visible", nullable = false, updatable = false)
+    private boolean vipBadgeLastPublishedVisible;
 
     // Only locked font/subscription operations may update this state. Ordinary
     // saves can contain an older User loaded from an authenticated session.
@@ -166,26 +166,26 @@ public class User extends Base implements UserDetails {
     }
 
     public FontPreset getEffectiveUsernameFont() {
-        return isProActive() ? getUsernameFont().availableOrDefault() : FontPreset.DEFAULT;
+        return isVipActive() ? getUsernameFont().availableOrDefault() : FontPreset.DEFAULT;
     }
 
     public FontPreset getEffectiveMessageFont() {
-        return isProActive() ? getMessageFont().availableOrDefault() : FontPreset.DEFAULT;
+        return isVipActive() ? getMessageFont().availableOrDefault() : FontPreset.DEFAULT;
     }
 
     @JsonIgnore
-    public boolean isProActive() {
-        return isProActiveAt(Instant.now());
+    public boolean isVipActive() {
+        return isVipActiveAt(Instant.now());
     }
 
     @JsonIgnore
-    public boolean isProActiveAt(Instant now) {
+    public boolean isVipActiveAt(Instant now) {
         return !Boolean.TRUE.equals(getDeleted()) &&
-                ((role != null && role.isStaffMember()) || (proPaidThrough != null && proPaidThrough.isAfter(now)));
+                ((role != null && role.isStaffMember()) || (vipPaidThrough != null && vipPaidThrough.isAfter(now)));
     }
 
-    public boolean isProBadgeVisible() {
-        return showProBadge && isProActive();
+    public boolean isVipBadgeVisible() {
+        return showVipBadge && isVipActive();
     }
 
     @Column(name = "email_verified")

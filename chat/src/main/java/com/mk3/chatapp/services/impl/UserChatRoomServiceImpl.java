@@ -81,7 +81,7 @@ public class UserChatRoomServiceImpl implements UserChatRoomService {
         if (joined >= limit) {
             throw new AccountLimitExceededException(AccountLimitExceededException.Code.PUBLIC_ROOMS,
                     "You can join up to " + limit + " chatrooms. Leave a chatroom before joining another.",
-                    limit, joined, 1, user.isProActive() ? null : 100L);
+                    limit, joined, 1, user.isVipActive() ? null : 100L);
         }
     }
 

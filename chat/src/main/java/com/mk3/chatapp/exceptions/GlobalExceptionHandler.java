@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(new AccountLimitErrorDTO(
                 status.value(), status.getReasonPhrase(), ex.getMessage(), LocalDateTime.now(),
                 new AccountLimitErrorDTO.Limit(ex.getCode(), ex.getMaximum(), ex.getUsed(),
-                        ex.getRequested(), ex.getProMaximum())));
+                        ex.getRequested(), ex.getVipMaximum())));
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)

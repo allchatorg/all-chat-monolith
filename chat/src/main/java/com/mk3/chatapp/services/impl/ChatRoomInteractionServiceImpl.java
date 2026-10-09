@@ -171,7 +171,7 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
         user = userChatRoomService.prepareNewPublicRoom(user);
         var chatRoom = chatRoomService.createChatRoom(request, user);
         UserChatRoom userChatroom = userChatRoomService.joinChatRoom(user, chatRoom);
-        roomActivityService.storeRoomMetadata(chatRoom.getId().toString(), chatRoom.getName(), chatRoom.isProOnly());
+        roomActivityService.storeRoomMetadata(chatRoom.getId().toString(), chatRoom.getName(), chatRoom.isVipOnly());
         var roomPopulation = roomActivityService.userJoinedRoom(chatRoom.getId().toString(), user.getId().toString());
 
         // TODO replace with mapper
@@ -317,7 +317,7 @@ public class ChatRoomInteractionServiceImpl implements ChatRoomInteractionServic
 
         return new ChatRoomWithMessageMetadataDTO(chatRoom.getId(), chatRoom.getName(), messagesPage.messages(),
                 chatRoom.isArchived(), messageCount, messagesPage.hasPrevious(), messagesPage.hasNext(),
-                messagesPage.firstMessageId(), messagesPage.lastMessageId(), lastReadMessageId, chatRoom.isProOnly());
+                messagesPage.firstMessageId(), messagesPage.lastMessageId(), lastReadMessageId, chatRoom.isVipOnly());
     }
 
     @Override

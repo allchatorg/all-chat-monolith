@@ -1,7 +1,7 @@
 package com.mk3.chatapp.services;
 
 import com.mk3.chatapp.models.identity.User;
-import com.mk3.chatapp.repositories.ProSubscriptionRepository;
+import com.mk3.chatapp.repositories.VipSubscriptionRepository;
 import com.mk3.chatapp.repositories.UserRepository;
 import com.stripe.exception.InvalidRequestException;
 import com.stripe.exception.StripeException;
@@ -24,7 +24,7 @@ import jakarta.persistence.LockModeType;
 @Slf4j
 public class StripeCustomerService {
     private final UserRepository userRepository;
-    private final ProSubscriptionRepository proSubscriptions;
+    private final VipSubscriptionRepository vipSubscriptions;
     private final EntityManager entityManager;
     @Value("${stripe.api-key:}")
     private String apiKey;
@@ -71,9 +71,9 @@ public class StripeCustomerService {
     }
 
     private void requireNoSavedSubscription(User user) {
-        // The customer is also shared with ads. Do not detach saved Pro billing state
+        // The customer is also shared with ads. Do not detach saved VIP billing state
         // when an ads request encounters a deleted test customer first.
-        boolean savedSubscription = proSubscriptions.findById(user.getId())
+        boolean savedSubscription = vipSubscriptions.findById(user.getId())
                 .map(subscription -> !"NONE".equals(subscription.getStatus())
                         || subscription.getStripeSubscriptionId() != null
                         || subscription.getStripeScheduleId() != null
@@ -88,7 +88,7 @@ public class StripeCustomerService {
                         || subscription.getScheduledChangeAt() != null
                         || subscription.isCancelAtPeriodEnd())
                 .orElse(false);
-        if (savedSubscription || user.getProPaidThrough() != null) {
+        if (savedSubscription || user.getVipPaidThrough() != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Your Stripe test customer was deleted. Clear its saved test subscription state before trying again.");
         }

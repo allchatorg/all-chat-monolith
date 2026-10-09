@@ -28,7 +28,7 @@ public class TypingAccessService {
     public boolean canParticipate(Long userId, Long roomId) {
         var room = chatRoomRepository.findById(roomId).orElse(null);
         var user = userRepository.findById(userId).orElse(null);
-        return room != null && user != null && (!room.isProOnly() || user.isProActive());
+        return room != null && user != null && (!room.isVipOnly() || user.isVipActive());
     }
 
     // Also used after commit: a fresh read must see the new access rules, not an old managed entity.

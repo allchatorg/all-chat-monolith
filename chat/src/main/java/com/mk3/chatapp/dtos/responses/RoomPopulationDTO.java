@@ -10,6 +10,6 @@ public record RoomPopulationDTO(
         Long totalMessagesCount,
         ChatRoomNoiseLevelEnum noiseLevel,
         boolean archived,
-        boolean proOnly
+        boolean vipOnly
 ) {
 }

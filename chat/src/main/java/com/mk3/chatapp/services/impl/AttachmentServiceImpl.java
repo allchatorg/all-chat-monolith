@@ -178,7 +178,7 @@ public class AttachmentServiceImpl implements AttachmentService {
                             "Uploading this file exceeds your hourly upload limit of %.2f MB (you've already used %.2f MB).",
                             limitMB,
                             usedMB), maxAllowedSize, totalUploadedFilesSize, newFileSize,
-                    user.isProActive() ? null : AccountLimits.PRO_HOURLY_UPLOAD_BYTES);
+                    user.isVipActive() ? null : AccountLimits.VIP_HOURLY_UPLOAD_BYTES);
         }
     }
 

@@ -24,7 +24,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class FileUploadController {
 
-    // Preserve the ads uploader's previous multipart ceiling independently of Pro chat uploads.
+    // Preserve the ads uploader's previous multipart ceiling independently of VIP chat uploads.
     private static final long MAX_FILE_SIZE_BYTES = 30L * 1024 * 1024;
 
     private final FileUploadService fileUploadService;

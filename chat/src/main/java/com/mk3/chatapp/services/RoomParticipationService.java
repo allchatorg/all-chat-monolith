@@ -14,14 +14,14 @@ public class RoomParticipationService {
     private final UserRepository userRepository;
 
     public void requireParticipation(ChatRoom room, User user) {
-        if (room.isProOnly()) requirePro(user);
+        if (room.isVipOnly()) requireVip(user);
     }
 
-    public void requirePro(User user) {
+    public void requireVip(User user) {
         // Resolve current entitlement rather than trusting a serialized session user.
         var current = user == null ? null : userRepository.findById(user.getId()).orElse(null);
-        if (current == null || !current.isProActive()) {
-            throw new ForbiddenException("Only PRO members can participate in PRO-only rooms. You can still read and report.");
+        if (current == null || !current.isVipActive()) {
+            throw new ForbiddenException("Only VIP members can participate in VIP-only rooms. You can still read and report.");
         }
     }
 }

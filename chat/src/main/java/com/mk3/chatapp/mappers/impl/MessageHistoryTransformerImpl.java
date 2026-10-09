@@ -67,13 +67,13 @@ public class MessageHistoryTransformerImpl implements MessageHistoryTransformer 
                 List.of(),
                 null,
                 null,
-                sender != null && sender.isProBadgeVisible(),
-                sender != null ? sender.getProBadgeRevision() : 0L,
+                sender != null && sender.isVipBadgeVisible(),
+                sender != null ? sender.getVipBadgeRevision() : 0L,
                 sender != null ? sender.getEffectiveUsernameFont() : com.mk3.chatapp.enums.FontPreset.DEFAULT,
                 sender != null ? sender.getEffectiveMessageFont() : com.mk3.chatapp.enums.FontPreset.DEFAULT,
                 sender != null ? sender.getFontRevision() : 0L,
                 null,
-                chatRoom != null && chatRoom.isProOnly()
+                chatRoom != null && chatRoom.isVipOnly()
         );
     }
 
