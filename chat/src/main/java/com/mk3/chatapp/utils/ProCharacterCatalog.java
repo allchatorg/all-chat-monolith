@@ -5,9 +5,11 @@ import java.util.Set;
 /** Shared allowlist for standalone stickers, inline emojis, and character reactions. */
 public final class ProCharacterCatalog {
     private static final Set<String> IDS = Set.of(
-            "wojak", "soyjak", "chud", "chad-1", "chad-2", "virgin", "doomer", "coomer",
-            "bloomer", "zoomer", "npc", "grug", "pepe", "apu-apustaja", "honkler", "spurdo", "gondola",
-            "big-brain-wojak", "dumb-wojak", "gigachad", "rage-pepe", "smug-pepe", "smug-wojak", "soyjak-2");
+            "catpuss-cheer", "catpuss-typing", "catpuss-love", "catpuss-heart-eyes", "catpuss-laugh",
+            "catpuss-cry", "catpuss-sad", "catpuss-angry", "catpuss-rage", "catpuss-shock", "catpuss-think",
+            "catpuss-smart", "catpuss-smug", "catpuss-cool", "catpuss-strong", "catpuss-shy", "catpuss-sleepy",
+            "catpuss-party", "catpuss-confused", "catpuss-blank", "catpuss-silly", "catpuss-thumbs-up",
+            "catpuss-wave", "catpuss-please", "catpuss-peek");
 
     private ProCharacterCatalog() {
     }
