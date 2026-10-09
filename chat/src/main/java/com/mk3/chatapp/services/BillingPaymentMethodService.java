@@ -156,7 +156,7 @@ public class BillingPaymentMethodService {
     private void setDefaultLocked(User user, PaymentMethod card) throws StripeException {
         String subscriptionId = proSubscriptions.findById(user.getId())
                 .map(pro -> pro.getStripeSubscriptionId()).orElse(null);
-        if (subscriptionId == null) throw conflict("There is no renewing Pro subscription to update.");
+        if (subscriptionId == null) throw conflict("There is no renewing VIP subscription to update.");
         Subscription subscription = Subscription.retrieve(subscriptionId, config.requestOptions());
         boolean isPro = subscription.getMetadata() != null
                 && "pro".equals(subscription.getMetadata().get("allchat_feature"));

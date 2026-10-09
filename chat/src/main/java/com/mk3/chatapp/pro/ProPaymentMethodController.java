@@ -61,7 +61,7 @@ public class ProPaymentMethodController {
         // Maintenance routes remain available to restricted existing subscribers, without
         // allowing the billing whitelist to provision a new account or purchase a plan.
         if (user.getStripeCustomerId() == null || !subscriptions.existsById(user.getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "There is no Pro billing account to manage yet.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "There is no VIP billing account to manage yet.");
         }
         return user;
     }

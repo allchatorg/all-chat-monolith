@@ -15,7 +15,7 @@ public class ProReactionService {
     public void validateForAdd(String emoji, String emojiId, Long userId) {
         if (validateIdentity(emoji, emojiId) && !proBadgeService.hasActiveEntitlement(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "allchat Pro is required to add this reaction");
+                    "allchat VIP is required to add this reaction");
         }
     }
 

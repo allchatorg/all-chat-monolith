@@ -121,7 +121,7 @@ public class ProBillingService {
                     throw conflict("Continue the existing checkout or cancel it before choosing a different plan.");
                 }
             }
-            throw conflict("You already have a Pro subscription. Manage it in subscription settings.");
+            throw conflict("You already have a VIP subscription. Manage it in subscription settings.");
         }
 
         if (projection.getCheckoutSessionId() != null) {
@@ -203,7 +203,7 @@ public class ProBillingService {
         User user = ownLockedUser();
         ProSubscription projection = subscriptions.findById(user.getId()).orElse(null);
         if (user.getStripeCustomerId() == null || projection == null) {
-            throw conflict("There is no Pro billing account to manage yet.");
+            throw conflict("There is no VIP billing account to manage yet.");
         }
         String configurationId = switchPlan ? config.getSwitchPortalConfigurationId()
                 : config.getBillingPortalConfigurationId();
@@ -661,7 +661,7 @@ public class ProBillingService {
 
     User ownLockedUser() {
         User authenticated = securityService.getCurrentUser();
-        if (authenticated == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to manage Pro");
+        if (authenticated == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to manage VIP");
         User user = users.findByIdForUpdate(authenticated.getId()).orElseThrow();
         entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
         return user;
@@ -694,7 +694,7 @@ public class ProBillingService {
 
     void requireEligible(User user) {
         if (user.getRole() != null && user.getRole().isStaffMember()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "allchat Pro is included with your staff role.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "allchat VIP is included with your staff role.");
         }
         if (!eligible(user)) throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                 "Claim your account and complete any required verification before subscribing.");
@@ -716,7 +716,7 @@ public class ProBillingService {
 
     private ResponseStatusException unavailable() {
         return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                "Pro billing is not available right now. Please try again later.");
+                "VIP billing is not available right now. Please try again later.");
     }
 
     private ResponseStatusException conflict(String message) {

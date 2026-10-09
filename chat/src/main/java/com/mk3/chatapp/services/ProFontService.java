@@ -56,7 +56,7 @@ public class ProFontService {
         entityManager.refresh(user, LockModeType.PESSIMISTIC_WRITE);
         Instant now = clock.instant();
         if (!user.isProActiveAt(now)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "An active allchat Pro subscription is required to change fonts");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "An active allchat VIP subscription is required to change fonts");
         }
         // A retry of an already-saved selection remains free, even at the quota.
         if (user.getUsernameFont() == request.usernameFont() && user.getMessageFont() == request.messageFont()) {

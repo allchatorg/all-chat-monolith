@@ -20,7 +20,7 @@ public class ProStickerService {
         }
         if (!proBadgeService.hasActiveEntitlement(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "allchat Pro is required to send this sticker");
+                    "allchat VIP is required to send this sticker");
         }
     }
 
@@ -41,7 +41,7 @@ public class ProStickerService {
         // emojis. Only an increase in a particular identity requires Pro.
         if (addedPaidEmoji && !proBadgeService.hasActiveEntitlement(userId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "allchat Pro is required to send this emoji");
+                    "allchat VIP is required to send this emoji");
         }
     }
 }

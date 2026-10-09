@@ -21,7 +21,7 @@ public class RoomParticipationService {
         // Resolve current entitlement rather than trusting a serialized session user.
         var current = user == null ? null : userRepository.findById(user.getId()).orElse(null);
         if (current == null || !current.isProActive()) {
-            throw new ForbiddenException("Only PRO members can participate in PRO-only rooms. You can still read and report.");
+            throw new ForbiddenException("Only VIP members can participate in VIP-only rooms. You can still read and report.");
         }
     }
 }
