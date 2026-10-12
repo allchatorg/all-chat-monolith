@@ -151,7 +151,8 @@ public class MailServiceImpl implements MailService {
             helper.setTo(to);
             helper.setSubject(title);
             helper.setFrom(MAIL_USERNAME, FROM_NAME);
-            helper.setText(purchaseReference + "\n\n" + body + "\n\nView purchase: " + detailsUrl, htmlContent);
+            helper.setText(purchaseReference + "\n\n" + body + "\n\nView purchase: " + detailsUrl
+                    + "\n\nIf you have any questions, contact support@allchat.org.", htmlContent);
             helper.addInline("allchat-light-logo", new ClassPathResource("mail/allchat-light-logo.png"), "image/png");
             mailSender.send(message);
         } catch (MessagingException | UnsupportedEncodingException exception) {

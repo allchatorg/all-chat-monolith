@@ -73,7 +73,6 @@
             padding: 20px;
             border-radius: 10px;
             margin: 20px 0;
-            border-left: 4px solid #667eea;
         }
 
         .ad-info h3 {
@@ -116,7 +115,6 @@
             padding: 20px;
             border-radius: 10px;
             margin: 20px 0;
-            border-left: 4px solid #667eea;
         }
 
         .next-steps h3 {
@@ -212,7 +210,6 @@
                 <li>Your payment authorization has been automatically cancelled - no charges have been made</li>
                 <li>Please review the rejection reason above</li>
                 <li>You may create a new advertisement that addresses the concerns mentioned</li>
-                <li>If you have any questions, please contact our support team</li>
             </ul>
         </div>
 
@@ -229,8 +226,9 @@
             Best regards,<br>
             The <span class="brand">allchat</span> Team
         </div>
+        <div style="margin-top: 20px; color: #555;">If you have any questions, contact <a href="mailto:support@allchat.org" style="color: #667eea;">support@allchat.org</a>.</div>
         <div style="margin-top: 20px; font-size: 0.8em; color: #888;">
-                <span>©2026 allchat LLC. All rights reserved. 18+ only. allchat<sup style="font-size: 0.6em;">®</sup>
+                <span>©<span th:text="${#dates.year(#dates.createNow())}">2026</span> allchat LLC. All rights reserved. 18+ only. allchat<sup style="font-size: 0.6em;">®</sup>
                     is a registered trademark of allchat LLC.</span>
         </div>
     </div>
