@@ -7,6 +7,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -48,21 +49,8 @@ public class MailSenderServiceImpl implements MailSenderService {
         context.setVariable("name", user.getApplicationUsername());
         context.setVariable("resetLink", resetLink);
 
-        String htmlContent = templateEngine.process("RESET_PASSWORD_TEMPLATE", context);
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
-            helper.setTo(user.getEmail());
-            helper.setSubject("Password Reset");
-            helper.setText(htmlContent, true);
-            helper.setFrom(MAIL_USERNAME, FROM_NAME);
-
-            mailSender.send(message);
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            throw new RuntimeException("Failed to send reset password email", e);
-        }
+        sendTemplatedMail(user.getEmail(), "Password Reset", "RESET_PASSWORD_TEMPLATE", context,
+                "Failed to send reset password email");
     }
 
     @Override
@@ -71,21 +59,8 @@ public class MailSenderServiceImpl implements MailSenderService {
         context.setVariable("name", user.getApplicationUsername());
         context.setVariable("verificationCode", code);
 
-        String htmlContent = templateEngine.process("EMAIL_VERIFICATION_TEMPLATE", context);
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
-            helper.setTo(user.getEmail());
-            helper.setSubject("Email Verification");
-            helper.setText(htmlContent, true);
-            helper.setFrom(MAIL_USERNAME, FROM_NAME);
-
-            mailSender.send(message);
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            throw new RuntimeException("Failed to send verification email", e);
-        }
+        sendTemplatedMail(user.getEmail(), "Email Verification", "EMAIL_VERIFICATION_TEMPLATE", context,
+                "Failed to send verification email");
     }
 
     @Override
@@ -95,21 +70,8 @@ public class MailSenderServiceImpl implements MailSenderService {
         context.setVariable("verificationCode", code);
         context.setVariable("settingsLink", FRONT_END_URL);
 
-        String htmlContent = templateEngine.process("EMAIL_UPDATE_TEMPLATE", context);
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
-            helper.setTo(newEmail);
-            helper.setSubject("Confirm Your New Email");
-            helper.setText(htmlContent, true);
-            helper.setFrom(MAIL_USERNAME, FROM_NAME);
-
-            mailSender.send(message);
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            throw new RuntimeException("Failed to send email update verification", e);
-        }
+        sendTemplatedMail(newEmail, "Confirm Your New Email", "EMAIL_UPDATE_TEMPLATE", context,
+                "Failed to send email update verification");
     }
 
     @Override
@@ -121,21 +83,8 @@ public class MailSenderServiceImpl implements MailSenderService {
         Context context = new Context();
         context.setVariable("name", user.getApplicationUsername());
 
-        String htmlContent = templateEngine.process("BAN_APPEAL_RECEIVED_TEMPLATE", context);
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
-            helper.setTo(user.getEmail());
-            helper.setSubject("We received your ban appeal");
-            helper.setText(htmlContent, true);
-            helper.setFrom(MAIL_USERNAME, FROM_NAME);
-
-            mailSender.send(message);
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            throw new RuntimeException("Failed to send ban appeal received email", e);
-        }
+        sendTemplatedMail(user.getEmail(), "We received your ban appeal", "BAN_APPEAL_RECEIVED_TEMPLATE", context,
+                "Failed to send ban appeal received email");
     }
 
     @Override
@@ -149,21 +98,8 @@ public class MailSenderServiceImpl implements MailSenderService {
         context.setVariable("approved", approved);
         context.setVariable("staffMessage", userFacingMessage);
 
-        String htmlContent = templateEngine.process("BAN_APPEAL_DECISION_TEMPLATE", context);
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
-            helper.setTo(user.getEmail());
-            helper.setSubject("Update on your ban appeal");
-            helper.setText(htmlContent, true);
-            helper.setFrom(MAIL_USERNAME, FROM_NAME);
-
-            mailSender.send(message);
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            throw new RuntimeException("Failed to send ban appeal decision email", e);
-        }
+        sendTemplatedMail(user.getEmail(), "Update on your ban appeal", "BAN_APPEAL_DECISION_TEMPLATE", context,
+                "Failed to send ban appeal decision email");
     }
 
     @Override
@@ -176,21 +112,8 @@ public class MailSenderServiceImpl implements MailSenderService {
         context.setVariable("name", user.getApplicationUsername());
         context.setVariable("verificationLink", FRONT_END_URL);
 
-        String htmlContent = templateEngine.process("ID_VERIFICATION_REQUIRED_TEMPLATE", context);
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
-
-            helper.setTo(user.getEmail());
-            helper.setSubject("Identity verification required");
-            helper.setText(htmlContent, true);
-            helper.setFrom(MAIL_USERNAME, FROM_NAME);
-
-            mailSender.send(message);
-        } catch (MessagingException | UnsupportedEncodingException e) {
-            throw new RuntimeException("Failed to send identity verification required email", e);
-        }
+        sendTemplatedMail(user.getEmail(), "Identity verification required", "ID_VERIFICATION_REQUIRED_TEMPLATE", context,
+                "Failed to send identity verification required email");
     }
 
     @Override
@@ -233,20 +156,27 @@ public class MailSenderServiceImpl implements MailSenderService {
         context.setVariable("signature", request.getSignature());
         context.setVariable("formDate", request.getDate());
 
-        String htmlContent = templateEngine.process("MODERATOR_APPLICATION_TEMPLATE", context);
+        sendTemplatedMail(ADMIN_EMAIL, "New Moderator Application - " + user.getApplicationUsername(),
+                "MODERATOR_APPLICATION_TEMPLATE", context, "Failed to send moderator application email");
+    }
+
+    private void sendTemplatedMail(String to, String subject, String template, Context context, String failureMessage) {
+        String htmlContent = templateEngine.process(template, context);
 
         try {
             MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setTo(ADMIN_EMAIL);
-            helper.setSubject("New Moderator Application - " + user.getApplicationUsername());
+            helper.setTo(to);
+            helper.setSubject(subject);
             helper.setText(htmlContent, true);
             helper.setFrom(MAIL_USERNAME, FROM_NAME);
+            // Referenced as cid:allchat-light-logo by templates/mail/layout.html
+            helper.addInline("allchat-light-logo", new ClassPathResource("mail/allchat-light-logo.png"), "image/png");
 
             mailSender.send(message);
         } catch (MessagingException | UnsupportedEncodingException e) {
-            throw new RuntimeException("Failed to send moderator application email", e);
+            throw new RuntimeException(failureMessage, e);
         }
     }
 }
