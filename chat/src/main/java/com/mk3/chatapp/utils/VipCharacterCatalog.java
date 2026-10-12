@@ -5,11 +5,11 @@ import java.util.Set;
 /** Shared allowlist for standalone stickers, inline emojis, and character reactions. */
 public final class VipCharacterCatalog {
     private static final Set<String> IDS = Set.of(
-            "catpuss-cheer", "catpuss-typing", "catpuss-love", "catpuss-heart-eyes", "catpuss-laugh",
-            "catpuss-cry", "catpuss-sad", "catpuss-angry", "catpuss-rage", "catpuss-shock", "catpuss-think",
-            "catpuss-smart", "catpuss-smug", "catpuss-cool", "catpuss-strong", "catpuss-shy", "catpuss-sleepy",
-            "catpuss-party", "catpuss-confused", "catpuss-blank", "catpuss-silly", "catpuss-thumbs-up",
-            "catpuss-wave", "catpuss-please", "catpuss-peek");
+            "catapuss-cheer", "catapuss-typing", "catapuss-love", "catapuss-heart-eyes", "catapuss-laugh",
+            "catapuss-cry", "catapuss-sad", "catapuss-angry", "catapuss-rage", "catapuss-shock", "catapuss-think",
+            "catapuss-smart", "catapuss-smug", "catapuss-cool", "catapuss-strong", "catapuss-shy", "catapuss-sleepy",
+            "catapuss-party", "catapuss-confused", "catapuss-blank", "catapuss-silly", "catapuss-thumbs-up",
+            "catapuss-wave", "catapuss-please", "catapuss-peek");
 
     private VipCharacterCatalog() {
     }
